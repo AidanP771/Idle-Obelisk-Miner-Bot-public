@@ -3,7 +3,9 @@
 Updated: 2026-10-24. Based on existing source code, local configurations,
 `README.md` and the former project overview. Primarily a static inventory; the screenshot layer
 described below was also checked on the emulator. Local settings and workflows
-may change independently of versioned code.
+may change independently of versioned code. Game facts measured in game, the
+game wiki (<https://shminer.miraheze.org/wiki/Obelisk_Miner_Wiki>) and the
+local workflow setup are recorded in [DEVELOPMENT_NOTES.md](DEVELOPMENT_NOTES.md).
 
 ## Purpose and Operation
 

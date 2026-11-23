@@ -18,6 +18,7 @@ These instructions apply to the entire project and our ongoing collaboration.
   - [docs/RELIABILITY.md](docs/RELIABILITY.md): action results, configuration validation, workflow reloads, and LAN access.
   - [docs/SCREENSHOTS.md](docs/SCREENSHOTS.md): screenshot pipeline and cache.
   - [docs/STATISTICS.md](docs/STATISTICS.md): statistics, uptime, and migration.
+  - [docs/DEVELOPMENT_NOTES.md](docs/DEVELOPMENT_NOTES.md): game facts verified in game, game wiki references, the local early-game workflow setup, verification methods, and open items. Read it before game-facing work.
 - Keep relevant documentation current when behavior or architecture changes. This file contains working instructions; technical details belong in `docs/`.
 
 ## Approach and Change Scope
