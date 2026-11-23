@@ -54,6 +54,7 @@ def run():
     state.lootbug_enabled = bool(getattr(_settings_mod, "LOOTBUG_ENABLED_DEFAULT", False))
     state.founders_enabled = bool(getattr(_settings_mod, "FOUNDERS_ENABLED", False))
     state.notices_enabled = bool(getattr(_settings_mod, "NOTICES_ENABLED", False))
+    state.smart_craft_enabled = bool(getattr(_settings_mod, "SMART_CRAFT_ENABLED", False))
     state.workflows_master_enabled = bool(getattr(_settings_mod, "WORKFLOWS_ENABLED_DEFAULT", False))
     state.detect_level_enabled = bool(getattr(_settings_mod, "DETECT_LEVEL_ENABLED", True))
     state.gem_statistics_enabled = _settings_mod.GEM_STATISTICS_ENABLED_DEFAULT
@@ -66,12 +67,14 @@ def run():
     from features import notices as notices_feature
     from features import workflows as workflows_feature
     from features import detect_level as detect_level_feature
+    from features import smart_craft as smart_craft_feature
     freebies_feature.start()
     lootbug_feature.start()
     founders_feature.start()
     notices_feature.start()
     workflows_feature.start()
     detect_level_feature.start()
+    smart_craft_feature.start()
     bot_log(f"[STARTUP] Freebies feature armed (enabled={state.freebies_enabled})")
     bot_log(f"[STARTUP] Lootbug feature armed (enabled={state.lootbug_enabled})")
     bot_log(f"[STARTUP] Founders feature armed (enabled={state.founders_enabled})")
@@ -93,6 +96,8 @@ def run():
             founders_feature.toggle()
         elif c == "notices_toggle":
             notices_feature.toggle()
+        elif c == "smart_craft_toggle":
+            smart_craft_feature.toggle()
         elif c == "detect_level_toggle":
             detect_level_feature.toggle()
         elif c == "detect_level_now":

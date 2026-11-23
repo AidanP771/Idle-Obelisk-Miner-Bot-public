@@ -110,6 +110,16 @@ def build_state_dict():
                 "next_check_ts": state.founders_next_check_ts,
                 "next_check_remaining": max(0, int(state.founders_next_check_ts - now)),
             },
+            "smart_craft": {
+                "enabled": state.smart_craft_enabled,
+                "crafted": state.smart_craft_bars_crafted,
+                "bought": state.smart_craft_upgrades_bought,
+                "last_run_ts": state.smart_craft_last_run_ts,
+                "next_check_ts": state.smart_craft_next_check_ts,
+                "next_check_remaining": max(0, int(state.smart_craft_next_check_ts - now)),
+                "status": state.smart_craft_last_status,
+                "trip": state.smart_craft_trip,
+            },
             "notices": {
                 "enabled": state.notices_enabled,
                 "clicked": state.notices_clicked_count,

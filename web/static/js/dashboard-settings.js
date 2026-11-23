@@ -84,6 +84,29 @@ const FIELD_HINTS={
   'FOUNDERS_LOG_LEVEL':'general worker and detection logs — FULL | TXT | UI',
   'FOUNDERS_LOG_LEVEL_CLICK':'tap event logs — FULL | TXT | UI',
   'FOUNDERS_LOG_LEVEL_BUSY':'postponed-by-lock logs — FULL | TXT | UI',
+  /* smart craft */
+  'SMART_CRAFT_ENABLED':'auto-start Smart Craft on bot launch (requires restart)',
+  'SMART_CRAFT_INTERVAL_S':'seconds between Smart Craft cycles',
+  'SMART_CRAFT_BUSY_RETRY_S':'retry delay when another feature holds the action lock',
+  'SMART_CRAFT_BUY_UPGRADES':'after crafting, tap Buy on each affordable upgrade that costs bars; each purchase is verified on a fresh screenshot; coin upgrades are left alone',
+  'SMART_CRAFT_MAX_BUYS':'maximum upgrade purchases per cycle (1-200)',
+  'SMART_CRAFT_MAX_ROUNDS':'read -> craft -> buy rounds per cycle (1-20); another round runs only while purchases still happen',
+  'SMART_CRAFT_FLOOR_TRIPS':'when bars are short only because their ore does not drop on the current floor (World 1 floors 1-20, Tin through VR-Amethyst), move to the lower floor that drops it, switch floor Auto off, and return (Auto restored) after the trip time; turning Smart Craft off also returns',
+  'SMART_CRAFT_FLOOR_TRIP_S':'seconds spent mining on the lower floor per trip (60-7200)',
+  'SMART_CRAFT_SELL_SURPLUS_ORE':'after buying, lock the ores that buyable bar-cost upgrades still need (plus ores without a known bar), press Sell All twice, then unlock them again; rows you locked yourself stay locked; gold is not spent (drone points are bought only right before a prestige)',
+  'SMART_CRAFT_USE_5X':'switch the Craft page to 5x before crafting (about five times faster); the game keeps the mode afterwards',
+  'SMART_CRAFT_MAX_PRESSES_PER_BAR':'maximum Craft presses per bar type and cycle (1-1000)',
+  'SMART_CRAFT_MAX_BATCH':'Craft presses between two verification screenshots (1-100)',
+  'SMART_CRAFT_MAX_SCROLL_PAGES':'Upgrades list pages scanned per cycle (0-50)',
+  'SMART_CRAFT_SCROLL_PX':'drag distance per list scroll',
+  'SMART_CRAFT_SCROLL_MS':'drag duration per list scroll; too short is ignored by the game',
+  'SMART_CRAFT_UI_DELAY_S':'wait after navigation taps and craft batches',
+  'SMART_CRAFT_LIST_ROI':'x1,y1,x2,y2 scrollable list area on Upgrades and Craft',
+  'SMART_CRAFT_ICON_THRESHOLD':'0.0-1.0 match score for bar icons',
+  'SMART_CRAFT_BUTTON_THRESHOLD':'0.0-1.0 match score for menu tiles and buttons',
+  'SMART_CRAFT_GLYPH_MAX_RATIO':'digit acceptance (0.1-1): nearest/second-nearest distance; lower is stricter, unreadable numbers are skipped',
+  'SMART_CRAFT_TAP_JITTER_PX':'random +/- pixel jitter on Smart Craft taps',
+  'SMART_CRAFT_LOG_LEVEL':'FULL | TXT | UI',
   /* lootbug */
   'LOOTBUG_CHECK_INTERVAL_S':'seconds between lootbug scans',
   'LOOTBUG_INTERVAL_VARIANCE_PCT':'random +/- percent of CHECK_INTERVAL per regular scan (0 = fixed interval, range 0-100); next countdown uses the actual scheduled time',
@@ -145,6 +168,9 @@ const FIELD_UNITS={
   'DETECT_LEVEL_NMS_MIN_DX_PX':'px',
   'LOOTBUG_SCREEN_REUSE_AGE_S':'s','LOOTBUG_POST_CLICK_DELAY_S':'s',
   'LOOTBUG_TAP_JITTER_PX':'px',
+  /* smart craft */
+  'SMART_CRAFT_INTERVAL_S':'s','SMART_CRAFT_BUSY_RETRY_S':'s','SMART_CRAFT_UI_DELAY_S':'s',
+  'SMART_CRAFT_SCROLL_PX':'px','SMART_CRAFT_SCROLL_MS':'ms','SMART_CRAFT_TAP_JITTER_PX':'px',
   /* workflows */
   'WF_INTERVAL_VARIANCE_PCT':'%',
   'WORKFLOWS_TAP_JITTER_PX':'px',
@@ -165,6 +191,7 @@ const SECTION_NOTES={
   'freebies':'<b>Freebie-Gems</b>: startup and each activation use FIRST (fast checks) until an available freebie icon is detected, then SLOW. A scan without either available icon returns to FIRST until the next detection. Missing screenshots do not change the phase. Defaults: FIRST 300 s, SLOW 2700 s (45 minutes). Look in <b>DETECT_ROI</b>, open the menu, scroll through <b>CLAIM_ROI</b> and tap claim. Waits for the shared action lock. Settings require a bot restart.',
   'founders':'<b>FOUNDERS BUNDLE</b>: detects Founders lootboxes and taps each once. Immediately rechecks a fresh screenshot after every successful tap, up to MAX_CLAIMS_PER_CYCLE taps (default 3). Remaining bundles or failed fresh captures use a short retry. Startup and each activation use FIRST (fast checks) until a bundle is detected, then SLOW. A regular scan without a bundle returns to FIRST until the next detection. Immediate fresh rechecks after taps do not reset SLOW. Defaults: FIRST 180 s, SLOW 3000 s (50 minutes). Independent switch; shares the action lock with other features. Auto-start is configured under Startup Defaults. Only enable if you own the Founders Bundle. Settings require a bot restart.',
   'lootbug':'<b>Auto-Lootbug</b>: every <b>CHECK_INTERVAL</b>s with random +/- <b>INTERVAL_VARIANCE_PCT</b>% (default 15%), scan <b>DETECT_ROI</b> for the Lootbug. The status countdown shows the actual scheduled next check. If found, tap it (jitter), wait, then search for <code>images/Lootbug/lootbug_buy_bonus.png</code> in <b>BONUS_BUY_ROI</b> and tap the detected buy box. After BUY_RETRY seconds, verify with a fresh screenshot; retry if the box remains visible. Count once only after a fresh post-tap frame no longer matches Buy (the reward itself is not measured). Existing Buy dialogs are resumed on later scans. Postponed if another feature is currently performing ingame actions. If the buy box is hidden by notifications, wait <b>BUY_RETRY</b>s and retry with a fresh screenshot up to BUY_MAX_ATTEMPTS (default 5). Then give up this cycle and release the action lock. An enabled Founders check due within FOUNDERS_LOOKAHEAD seconds (default 5) has priority; Lootbug waits without the lock and aborts an ongoing Buy search early if necessary. The popup is never closed automatically. The action lock stays held only during the bounded Buy search.<br><b>Gem-Bonus selection</b>: disable Auto-Lootbug, wait for a Lootbug popup, select the bonuses you want in-game, then click <b>Buy</b>. The game remembers your selection. Enable Auto-Lootbug again afterwards.<br><b>Required in-game setting</b>: enable <b>Remove lootbug gem confirmation</b> so buying requires only one click.',
+  'smart_craft':'<b>Smart Craft</b>: opens Upgrades, scrolls through the list and reads each buyable upgrade that costs bars (bar icon + have/need). Per bar type the target is the sum of all needs. On the Craft page it presses that bar\'s Craft button in batches, verifying the bar count with a fresh screenshot after each batch; it stops at the target, when ore runs out, or when a batch shows no progress. Then (optional) it taps Buy on each affordable bar-cost upgrade, verifying every purchase on a fresh screenshot, and closes the menu. The in-game Buy All button (first tap arms it, second tap buys every affordable upgrade) is never tapped. Numbers that cannot be read with certainty are skipped, never guessed. Templates live in <code>images/smart_craft/</code>; layout targets 900x1600 portrait, English UI. Bars are never sold. Auto-start is configured under Startup Defaults. Settings require a bot restart.',
   'workflows':'<b>Workflows</b>: user-defined step sequences (taps, swipes, template clicks). Edit them in the <b>Workflows</b> tab above. Master "Auto WF" toggle pauses all scheduling and blocks manual triggers. Per-WF intervals get a global variance (set here) plus optional per-WF override.',
   'detect_level':'<b>Detect Level</b>: periodically scans <b>ROI</b> for digit templates in <code>images/level/</code> (digit_0_tpl.png … digit_9_tpl.png), composes 1-3 digits left-to-right into the current level (1-999). Consumed by workflow if-conditions <b>level_eq / level_gte / level_lte</b>. Enable or disable it under Startup Defaults; save and restart to apply.',
 };
@@ -176,7 +203,7 @@ function renderSettings(data){
   let h='';
   for(const[section,vals]of Object.entries(data)){
     if(typeof vals!=='object'||vals===null)continue;
-    const sectionLabel = section==='tapping' ? 'Humanized Taps' : section==='founders' ? 'FOUNDERS BUNDLE' : section==='notices' ? 'Notices' : section==='startup_defaults' ? 'Startup Defaults' : section;
+    const sectionLabel = section==='tapping' ? 'Humanized Taps' : section==='founders' ? 'FOUNDERS BUNDLE' : section==='smart_craft' ? 'Smart Craft' : section==='notices' ? 'Notices' : section==='startup_defaults' ? 'Startup Defaults' : section;
     h+=`<div class="cfg-section"><div class="cfg-section-title" onclick="toggleCfgSection(this)">${sectionLabel}</div><div class="cfg-fields">`;
     if(SECTION_NOTES[section]){
       h+=`<div style="font-size:.58rem;color:var(--text-dim);padding:4px 0 6px;line-height:1.4">${SECTION_NOTES[section]}</div>`;

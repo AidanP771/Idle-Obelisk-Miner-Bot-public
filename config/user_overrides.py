@@ -248,7 +248,12 @@ def apply_overrides_to_settings(settings_globals: dict, overrides: dict):
                 value = tuple(int(x) for x in value)
             settings_globals[key] = value
 
+    for key, value in overrides.get("smart_craft", {}).items():
+        settings_globals[key] = tuple(int(c) for c in value) if key == "SMART_CRAFT_LIST_ROI" else value
+
     sd = overrides.get("startup_defaults", {})
+    if "SMART_CRAFT_ENABLED" in sd:
+        settings_globals["SMART_CRAFT_ENABLED"] = bool(sd["SMART_CRAFT_ENABLED"])
     for key, target in (("gem_statistics_enabled", "GEM_STATISTICS_ENABLED_DEFAULT"),
                         ("screenshot_visible", "SCREENSHOT_VISIBLE_DEFAULT")):
         if key in sd:

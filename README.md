@@ -42,6 +42,7 @@ The bot uses Android screenshots, fixed screen regions and OpenCV template match
 | **Freebies** | Detects available Freebie icons, opens the menu, scrolls to the claim button, claims and closes the menu. Uses fast scans until detection and returns to fast scans after an available-icon miss. |
 | **Lootbug** | Detects a Lootbug and taps the Buy box using the bonus selection remembered by the game. Retries obscured or still-visible Buy boxes within a configured limit. |
 | **Founders Bundle** | Independently detects and taps Founders lootboxes, checking a fresh screenshot after each tap to handle consecutive bundles. Enable only if you own the bundle. |
+| **Smart Craft** | Reads which bars the buyable upgrades cost, crafts the missing bars and buys those upgrades, verifying every step on a fresh screenshot. Never sells bars or spends coins. |
 | **Notices** | Saves an image of a supported game notice before dismissal, with a persistent inbox for review and acknowledgement. |
 | **Level detection** | Recognizes levels 1–999 from digit templates and supplies level-based workflow conditions. |
 | **Workflows** | Runs custom sequences automatically or on demand, with intervals, variance, image checks, branches and reusable subworkflows. |
@@ -70,6 +71,7 @@ Freebie, Lootbug, Founders, Level and Notices scans have progress bars and count
 | **Freebies** | Enables or pauses collection and its statistics tracking. |
 | **Lootbug** | Enables or pauses detection and the bounded Buy-box flow. |
 | **FOUNDERS BUNDLE** | Enables or pauses the independent Founders worker. |
+| **Smart Craft** | Enables (and immediately runs) or pauses Smart Craft; switching OFF cancels a running cycle at the next step. |
 | **Notices** | Enables or pauses automatic saving and dismissal. The saved inbox remains available while OFF. |
 | **Reload** | Requests application of saved workflow definitions after the current execution finishes. |
 | **Restart** | Restarts the process to apply general settings and startup defaults. |
@@ -99,6 +101,7 @@ Expand **Configuration** and select **Settings**. Sections open independently. F
 | **adb** | Preferred device, automatic connection, fallback ports, timeouts and retries. |
 | **detect_level** | Detection enablement, digit ROI, interval, threshold and cache age. |
 | **FOUNDERS BUNDLE** | Initial/long-term intervals, template and ROI, jitter, claim-chain limit and logging. |
+| **Smart Craft** | Interval, purchase switch and limits, floor trips and trip time, craft batch size, list scrolling, recognition thresholds and logging. |
 | **freebies** | Initial/long-term intervals, icon/claim/close ROIs, scrolling, waits, estimated gems per claim and logging. |
 | **lootbug** | Interval and variance, detection and Buy ROIs/templates, retry limits and Founders priority window. |
 | **Notices** | Scheduling, masked frame templates, detection ROI, dismiss coordinates, retries and archive size limit. |
@@ -119,6 +122,7 @@ ROIs use **`x1, y1, x2, y2`**, in Android screen pixels. Thresholds are match sc
 - **Freebies:** the default initial interval is 300 seconds. The first available-icon detection switches to 2700 seconds, even if the subsequent claim fails. A later scan without either available icon returns to fast checks (300 seconds by default) until the next detection. Missing screenshots do not change the phase. Restart or reactivation resets the phase. Set `FREEBIES_DIAMONDS_PER_CLAIM` to your expected reward; statistics use this amount.
 - **Lootbug:** while automation is OFF, choose your bonuses in the game and confirm with **Buy**. The game remembers that selection. Enable **Remove lootbug gem confirmation** before enabling automation. The bot does not select bonuses. It checks a fresh image for Buy-box disappearance after a tap, retries within a limit and never automatically closes the dialog. Due or pending enabled Founders checks take priority.
 - **Founders:** initial scans default to 180 seconds; a detection switches to 3000 seconds. A later regular scan without a bundle returns to fast 180-second checks until the next detection. Fresh rechecks handle up to three taps per cycle by default; remaining bundles use a short retry. Its switch and schedule are independent of Lootbug.
+- **Smart Craft:** every 600 seconds by default it opens **Upgrades**, reads each buyable upgrade that costs bars (for example *Upgrade Pickaxe 6/35*), crafts the missing bars on the **Craft** page (switching it to 5x) and then taps **Buy** on the upgrades that became affordable, repeating for further levels while purchases still happen (up to three rounds per cycle). Ore left over for less than one 5x press is crafted in 1x. Optional **surplus ore selling** (off by default): ores that no buyable bar-cost upgrade needs are sold with **Sell All** while the needed ores are temporarily locked. Optional **floor trips** (off by default): if bars are short only because their ore does not drop on the current floor, it moves to the lower floor that drops it, switches the floor **Auto** toggle off, and after the trip time returns to the original floor and restores Auto. The target per bar type is the sum of all needs. Numbers it cannot read with certainty are skipped, never guessed; a crafting batch without visible progress stops crafting. The in-game **Buy All** button is not used. Supports twelve World 1 bar types (Tin through Demonite, VR-Tin and VR-Amethyst) at 900 × 1600 in English; disable the *upgrades & contracts* / *Craft & upgrades* workflows while it is ON so they do not compete for the menu.
 - **Notices:** supported frames are matched without reading their text. The default regular interval is 45 minutes with ±15% variance. Saving must succeed before dismissal. A full archive stops further saves and taps rather than deleting unread images.
 - **Humanized Taps:** defaults are 100 ms with ±30% duration variation. Explicit workflow hold durations remain exact. Feature/step jitter can override global position jitter. Variation does not guarantee undetectable automation.
 
@@ -342,6 +346,7 @@ Template matching searches fixed ROIs, level detection assembles digit templates
 | Level conditions unavailable | Enable/configure level detection, save and restart; check digit ROI/templates. |
 | Statistics grey or unavailable | Enable Freebies for tracking; averages/windows need sufficient time. Legacy uptime cannot be reconstructed. |
 | Old or unavailable screenshot | Enable the viewer; check configured filenames and capture logs. The viewer does not capture a new frame. |
+| Smart Craft crafts nothing | Tile tooltip and `[SMART_CRAFT]` logs: unreadable numbers, a Craft/Upgrades count mismatch or missing ore skip a bar on purpose. Check resolution, English UI and that the bar type has an icon in `images/smart_craft/bars/`. |
 | Notice saving stops | Archive errors, size limit, captures and supported frame templates. Preserve unread images before cleanup. |
 
 ## Further documentation

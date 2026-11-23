@@ -169,6 +169,19 @@ function updateStatus(d) {
       : `<span style="color:var(--red)">Off</span>`);
     updateScanCountdown('s-founders-next',founders);
   }
+
+  /* Smart Craft tile: verified crafted bars; last cycle result as tooltip */
+  const sc = d.smart_craft||{};
+  const scVal = document.getElementById('s-smart-craft-val');
+  if(scVal && document.getElementById('s-smart-craft-next')){
+    setStatusMarkup(scVal, sc.enabled
+      ? `<span style="color:var(--green)">Active</span> <span style="font-size:.7em;color:var(--text-dim)">(${Number(sc.crafted)||0} bars, ${Number(sc.bought)||0} buys)</span>`
+      : `<span style="color:var(--red)">Off</span>`);
+    const tile = document.getElementById('s-smart-craft');
+    const trip = sc.trip ? ' · floor trip '+sc.trip.origin+' → '+sc.trip.floor : '';
+    if(tile) tile.title = (sc.status ? 'Last cycle: '+sc.status : 'No cycle yet')+trip;
+    updateScanCountdown('s-smart-craft-next',sc);
+  }
 }
 
 
@@ -179,6 +192,7 @@ function updateButtons(d) {
   const lb=d.lootbug||{};
   setBtn('btn-lootbug',lb.enabled,'\uD83D\uDC1B Lootbug');
   setBtn('btn-founders',(d.founders||{}).enabled,'\uD83D\uDCE6 FOUNDERS BUNDLE');
+  setBtn('btn-smart-craft',(d.smart_craft||{}).enabled,'\u2692\uFE0F Smart Craft');
 }
 
 function setBtn(id,isOn,label){const el=document.getElementById(id);if(!el)return;el.textContent=label;el.classList.toggle('on',!!isOn);el.classList.toggle('off',!isOn)}

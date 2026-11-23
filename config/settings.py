@@ -46,6 +46,7 @@ ADB_SCAN_PORTS = [
     7555,                   # MuMu 6
     21503, 21513,           # MEmu (instance 1, 2)
     62001, 62025,           # Nox (instance 1, 2)
+    5556,                   # Bluestacks (instance 1)
 ]
 ADB_CONNECT_TIMEOUT = 5
 ADB_MAX_RETRIES = 2
@@ -169,6 +170,32 @@ FOUNDERS_TAP_JITTER_PX = 4
 FOUNDERS_LOG_LEVEL = "FULL"
 FOUNDERS_LOG_LEVEL_CLICK = "FULL"
 FOUNDERS_LOG_LEVEL_BUSY = "FULL"
+
+# ========= Smart Craft feature =========
+# Reads bar costs of buyable upgrades, crafts the missing bars, then buys
+# the affordable bar-cost upgrades. Templates: images/smart_craft/. Layout targets 900x1600, English.
+SMART_CRAFT_ENABLED = False            # startup default; runtime toggle is separate
+SMART_CRAFT_INTERVAL_S = 600.0
+SMART_CRAFT_BUSY_RETRY_S = 15.0
+SMART_CRAFT_BUY_UPGRADES = True        # buy affordable bar-cost upgrades after crafting
+SMART_CRAFT_MAX_BUYS = 20              # upgrade purchases per cycle
+SMART_CRAFT_MAX_ROUNDS = 3             # read -> craft -> buy rounds per cycle (more levels)
+SMART_CRAFT_USE_5X = True              # switch the Craft page to 5x before crafting
+SMART_CRAFT_FLOOR_TRIPS = False        # mine missing ore on a lower floor, then return
+SMART_CRAFT_FLOOR_TRIP_S = 600.0       # time spent on the lower floor per trip
+SMART_CRAFT_SELL_SURPLUS_ORE = False   # Sell All for ores no buyable bar-cost upgrade needs
+SMART_CRAFT_MAX_PRESSES_PER_BAR = 50   # Craft presses per bar type and cycle
+SMART_CRAFT_MAX_BATCH = 10             # presses between two verification screenshots
+SMART_CRAFT_MAX_SCROLL_PAGES = 6       # Upgrades list pages scanned per cycle
+SMART_CRAFT_SCROLL_PX = 400
+SMART_CRAFT_SCROLL_MS = 1000           # drag duration; short swipes are ignored in-game
+SMART_CRAFT_UI_DELAY_S = 0.8           # wait after navigation taps and craft batches
+SMART_CRAFT_LIST_ROI = (40, 170, 860, 1395)   # scrollable list area (Upgrades/Craft)
+SMART_CRAFT_ICON_THRESHOLD = 0.8
+SMART_CRAFT_BUTTON_THRESHOLD = 0.8
+SMART_CRAFT_GLYPH_MAX_RATIO = 0.75     # accept a digit only if clearly nearest; lower = stricter
+SMART_CRAFT_TAP_JITTER_PX = 3
+SMART_CRAFT_LOG_LEVEL = "FULL"
 
 # ========= Detect Level feature =========
 # Scans a small ROI for digit templates (images/level/digit_*_tpl.png),

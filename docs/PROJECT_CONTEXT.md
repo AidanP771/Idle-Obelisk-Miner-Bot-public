@@ -32,7 +32,7 @@ templates; Rainbow Floors are detected using HSV values and hue distribution.
 | `core/screen_cache.py`, `game_state.py` | Isolated full-device Android captures, atomic per-slot screenshot files in `temp/`, validated cache and serialized game detection. `core/screenshot.py` uses the same capture pipeline as a compatibility helper. |
 | `core/vision.py`, `rotation_cache.py` | Grayscale image matching, cached rotated templates, masking and downscaled matching. Templates reside in `images/`. |
 | `core/tapper.py`, `scroll.py` | Central click and scroll primitives with configurable timing, coordinate jitter and drag gestures. |
-| `features/` | Independent workers for Freebies, Lootbugs, level detection and workflow scheduling; gem statistics with JSON persistence. |
+| `features/` | Independent workers for Freebies, Lootbugs, Founders, Notices, Smart Craft, level detection and workflow scheduling; gem statistics with JSON persistence. |
 | `web/config_api.py`, `state_builder.py`, `security.py` | Configuration/statistics API, dashboard state construction and LAN/origin access checks. |
 | `web/templates/`, `web/static/` | HTML/CSS and JavaScript dashboard without an apparent frontend build step. The workflow editor comprises six scripts loaded together. |
 
@@ -168,6 +168,85 @@ lazy imports to avoid circular imports. Level detection writes
   (`ok`, `busy`, `no_game`, `pending`), fresh rechecks and chain limits.
   These use the configured Founders log routing;
   busy scheduling uses `FOUNDERS_LOG_LEVEL_BUSY`.
+- **Smart Craft:** independent worker in `features/smart_craft.py` with its
+  own switch (`smart_craft_toggle`), status tile (verified bars crafted and
+  upgrades bought; last cycle result as tooltip) and countdown. Settings live
+  in the `smart_craft` section (`SMART_CRAFT_*`); `SMART_CRAFT_ENABLED` belongs
+  to **Startup Defaults**. One cycle holds `state.ingame_action_lock`
+  throughout: open main menu -> Upgrades, scroll from the top through the
+  list and read every row that has a Buy button and a bar cost (bar icon +
+  `have/need`), stopping at the locked "Unlock At Level" section. Per bar
+  type the target is the sum of all needs. Rows with two costs (two bars, or
+  bar + gold per the game wiki) are read up to the next cost icon (bar
+  templates plus `images/smart_craft/coin.png`). Craft page: switch to 5x
+  (`SMART_CRAFT_USE_5X`, `qty_5x.png`; green = active, the game keeps the
+  mode), locate each bar's row (scrolling if needed), press its Craft button in batches
+  (`SMART_CRAFT_MAX_BATCH`, capped by `SMART_CRAFT_MAX_PRESSES_PER_BAR` and by
+  the presses the shown ore covers) and
+  re-read the row after every batch. When the ore no longer covers one 5x
+  press, the rest is crafted in 1x (`qty_1x.png`; the switch counts only if the
+  row's ore cost drops) and 5x is selected again afterwards. One batch without
+  progress is retried
+  once (the game occasionally drops a press). Then (`SMART_CRAFT_BUY_UPGRADES`) tap
+  Buy on each affordable bar-cost row (bright button and `have >= need`), up
+  to `SMART_CRAFT_MAX_BUYS`. Buying raises the next level's cost, so the
+  read -> craft -> buy round repeats while purchases happen, up to
+  `SMART_CRAFT_MAX_ROUNDS` (default 3); then the menu is closed. Coin upgrades are never
+  bought; bars are never sold.
+  Surplus ore (`SMART_CRAFT_SELL_SURPLUS_ORE`, default off): only when the
+  last round bought nothing (so its upgrade scan is current), the Sell page is
+  opened (`sell_all_label.png`). Rows are found by their red Sell button
+  (dark = locked) and identified by colour template matching of the small ore
+  icon (`images/smart_craft/ores/`, best >= 0.8 and 0.15 ahead of the next).
+  Ores of bar types some buyable upgrade costs, and ores without a bar
+  template, are locked; an unrecognised row aborts before selling. Sell All is
+  tapped twice (first tap arms it, verified in game 2026-11-23; a row's own
+  Sell button sells only one ore). The rows locked by the bot are unlocked
+  again; rows the player locked are never touched. A sale counts if a sold
+  row's count box changes. Gold is not spent here.
+  Floor trips (`SMART_CRAFT_FLOOR_TRIPS`, default off): when crafting stopped
+  for lack of ore, the missing ore per bar is estimated and, unless the current
+  floor drops one of those ores, Smart Craft opens Floor Select (HUD button,
+  `images/smart_craft/floors/`), reads the World 1 buttons by colour (fixed
+  two-column grid, 21 rows; red = unlocked, green = current), moves to the lower
+  floor with the best weighted ore share (`FLOOR_ORE_SHARES`: floors 1-20,
+  first floor of a pair 80/20, second 50/50 per the wiki), confirms the new
+  green floor, and switches the floor Auto toggle (below the HUD button, green =
+  on) off. If Auto cannot be switched off, it moves back at once. After
+  `SMART_CRAFT_FLOOR_TRIP_S` the next cycle crafts and buys first, then returns
+  to the origin floor and restores Auto. Switching Smart Craft off also returns.
+  The trip is stored in `smart_craft_trip.json` (project root, git-ignored) so
+  a restart still returns. Only World 1 without a scrolled panel is supported;
+  the first live floor change has not been verified yet (a confirmation dialog
+  after the floor tap would abort the trip with "floor change not confirmed"). The in-game **Buy All** button is not used:
+  its first tap only arms it (orange), a second tap buys every affordable
+  upgrade.
+  Recognition (900x1600 portrait, English): `images/smart_craft/bars/*.png`
+  are the large bar icons (Craft output icon = Upgrades cost icon). All bars
+  share one sprite in different colours, so a shape match finds an icon and
+  the mean colour picks the bar; icons farther than 20 from every known
+  colour (dimmed/locked icons, bar types without a template) are ignored.
+  Adding a PNG adds a bar type. Numbers: the game renders text at roughly
+  1/1.8 scale and upscales it, so glyph pixels vary with position. Glyphs are
+  segmented as connected components with a relative brightness threshold
+  (core strokes only, excluding the grey drop shadow), described by 3x5 ink
+  zones and matched against reference variants in
+  `images/smart_craft/digits/<char>_<n>.png`. A glyph is accepted only if its
+  nearest reference is within 0.7 and clearly closer than any other character
+  (`SMART_CRAFT_GLYPH_MAX_RATIO`, default 0.75); unknown glyphs or stray blobs
+  (e.g. "1.2k") make the whole number unreadable, and that row is skipped.
+  Safeguards: Upgrades rows and Craft bar counts must read identically on two
+  consecutive frames (numbers animate after changes); the Craft bar count must
+  equal the Upgrades `have` value before crafting; a batch without progress or
+  with an implausible change (> 50 bars per press) stops crafting; purchases
+  count only if a fresh frame shows the row changed. List scrolling measures
+  the real content shift (drags overshoot by momentum) from a textured band
+  and treats repetitive matches as unknown, ending the scan with the rows read
+  so far. Verified on the emulator (2026-11-22, level 37-42, World 1 with
+  seven bar types; 2026-11-23 offline on saved frames for Topaz, Obsidian,
+  Demonite, VR-Tin and VR-Amethyst, e.g. the Demonite cost of Upgrade
+  Pickaxe). Bar types without a template are invisible to the scan; other worlds, larger numbers with suffixes and other
+  resolutions are not supported yet.
 - **Level detection:** periodic scan, digit assembly for levels 1-999, filtering
   of horizontally overlapping matches, display and manual scan. Templates for
   digits 0-9 exist in the inspected files.
@@ -370,7 +449,9 @@ Settings, logging and verification details: [Screenshots](SCREENSHOTS.md).
 - For settings/workflow changes, consider the backend, editor fields, JSON
   format, reload behavior and dashboard state together. For feature changes,
   consider locks, screenshot age and menu/popup state.
-- Targeted Founders regression tests: `tests/test_founders.py`.
+- Targeted Founders regression tests: `tests/test_founders.py`. Smart Craft
+  (number reading from the shipped glyphs, list-shift measurement, craft and
+  purchase verification, locking, settings): `tests/test_smart_craft.py`.
   Freebie phase scheduling, logs, reactivation, migration and configuration API
   regressions: `tests/test_freebies.py`; editor controls: `tests/test_dashboard_editors.cjs`.
   Run `python -B -m unittest discover -s tests -v`. Tests cover migration,

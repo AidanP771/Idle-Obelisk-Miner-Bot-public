@@ -68,6 +68,15 @@ founders_last_click_ts = 0.0
 founders_next_check_ts = 0.0
 founders_followup_pending = False    # unresolved bundle or failed fresh follow-up needs a short retry
 
+# ========= Smart Craft feature =========
+smart_craft_enabled = False
+smart_craft_bars_crafted = 0         # verified bar-count increases only
+smart_craft_upgrades_bought = 0      # purchases verified on a fresh frame
+smart_craft_last_run_ts = 0.0
+smart_craft_next_check_ts = 0.0
+smart_craft_last_status = ""
+smart_craft_trip = None              # {"origin", "floor", "until", "auto_was_on"} during a floor trip
+
 # ========= Notices feature =========
 notices_enabled = False
 notices_clicked_count = 0
