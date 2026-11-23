@@ -123,3 +123,30 @@ class SocketIntegrationTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SingleInstanceTests(unittest.TestCase):
+    """A second launch must not start a second bot when the port is taken."""
+
+    def setUp(self):
+        with patch("web.secret_key.load_or_create_secret_key", return_value="test-only-secret"):
+            self.web = helpers.load_module("single_instance_web_under_test", "web/app.py")
+
+    def test_busy_port_refuses_before_any_bot_thread_starts(self):
+        import socket
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as listener:
+            listener.bind(("127.0.0.1", 0))
+            listener.listen(1)
+            port = listener.getsockname()[1]
+            self.assertTrue(self.web.port_in_use("127.0.0.1", port))
+            with patch.object(self.web.time, "sleep") as sleep, \
+                    patch.object(self.web, "start_bot_thread") as bot, \
+                    patch.object(self.web, "start_state_pusher") as pusher, \
+                    patch.object(self.web.socketio, "run") as run:
+                with self.assertRaises(RuntimeError):
+                    self.web.run_server(host="127.0.0.1", port=port)
+                self.assertEqual(sleep.call_count, 10)   # waited ~5 s for a restarting instance
+                bot.assert_not_called()
+                pusher.assert_not_called()
+                run.assert_not_called()
+        self.assertFalse(self.web.port_in_use("127.0.0.1", port))

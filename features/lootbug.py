@@ -14,7 +14,9 @@ Flow:
     6. Tap the matched lootbug (jitter), wait LOOTBUG_POST_CLICK_DELAY_S,
        then find lootbug_buy_bonus.png inside LOOTBUG_BONUS_BUY_ROI and
        verify dismissal after each tap. Retry up to BUY_MAX_ATTEMPTS,
-       yielding early when Founders is due. Never click Close.
+       yielding early when Founders is due. Close is tapped only when
+       LOOTBUG_CLOSE_POPUP is enabled (default off): after a verified Buy
+       or after exhausted attempts, if the popup's close button is visible.
 
 The worker runs in its own daemon thread, gated by `state.lootbug_enabled`
 (toggleable via WebUI).
@@ -123,6 +125,34 @@ def _founders_due() -> bool:
     return deadline <= time.time() + lookahead
 
 
+def _close_popup(thr: float, reason: str) -> bool:
+    """Opt-in: tap the popup's close button if it is visible on a fresh frame.
+    Returns True when a close tap was sent (dismissal is checked and logged)."""
+    if not getattr(s, "LOOTBUG_CLOSE_POPUP", False):
+        return False
+    if not state.lootbug_enabled or _stop_evt.is_set():
+        return False
+    template = s.LOOTBUG_POPUP_CLOSE_TEMPLATE
+    roi = tuple(s.LOOTBUG_POPUP_CLOSE_ROI)
+    img = _fresh_own_screen()
+    if img is None:
+        _log("[LOOTBUG] no screenshot for the close check", "LOOTBUG_LOG_LEVEL_BONUS")
+        return False
+    close = find_template(img, template, roi=roi, threshold=thr)
+    if not close["found"]:
+        _log(f"[LOOTBUG] popup closed already ({reason}; close score={close['score']:.3f})",
+             "LOOTBUG_LOG_LEVEL_BONUS")
+        return False
+    if not _click(close["cx"], close["cy"], f"popup close ({reason})"):
+        return False
+    _sleep_interruptible(0.8)
+    check = _fresh_own_screen()
+    still = check is not None and find_template(check, template, roi=roi, threshold=thr)["found"]
+    _log(f"[LOOTBUG] popup {'still open' if still else 'closed'} after close tap",
+         "LOOTBUG_LOG_LEVEL_BONUS")
+    return True
+
+
 def _buy_when_visible(thr: float) -> bool:
     """Bound Buy retries while retaining the caller's action lock."""
     limit = int(getattr(s, "LOOTBUG_BUY_MAX_ATTEMPTS", 5))
@@ -163,6 +193,7 @@ def _buy_when_visible(thr: float) -> bool:
                             state.lootbug_bonus_count = getattr(state, "lootbug_bonus_count", 0) + 1
                             _log("[LOOTBUG] Buy box absent after tap; reward not independently verified",
                                  "LOOTBUG_LOG_LEVEL_BONUS")
+                            _close_popup(thr, "after Buy")
                             return True
                         _log("[LOOTBUG] Buy box still visible after tap -> retrying",
                              "LOOTBUG_LOG_LEVEL_BONUS")
@@ -177,9 +208,13 @@ def _buy_when_visible(thr: float) -> bool:
         else:
             _log("[LOOTBUG] no buy screenshot -> retrying", "LOOTBUG_LOG_LEVEL_BONUS")
         if attempt == limit:
+            closing = bool(getattr(s, "LOOTBUG_CLOSE_POPUP", False))
             _log(f"[LOOTBUG] Buy search exhausted after {limit} attempts -> "
-                 "giving up this cycle and releasing action lock (no Close tap)",
+                 f"giving up this cycle and releasing action lock "
+                 f"({'closing the popup' if closing else 'no Close tap'})",
                  "LOOTBUG_LOG_LEVEL_BONUS")
+            if _close_popup(thr, "Buy not found"):
+                return False
             if (getattr(s, "LOOTBUG_TRIGGER_FOUNDERS_ON_BUY_FAILURE", False)
                     and state.lootbug_enabled and not _stop_evt.is_set()):
                 from features import founders

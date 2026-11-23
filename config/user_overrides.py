@@ -221,8 +221,9 @@ def apply_overrides_to_settings(settings_globals: dict, overrides: dict):
         "LOOTBUG_BUY_RETRY_S",
         "LOOTBUG_BUY_MAX_ATTEMPTS", "LOOTBUG_FOUNDERS_LOOKAHEAD_S",
         "LOOTBUG_TRIGGER_FOUNDERS_ON_BUY_FAILURE",
+        "LOOTBUG_CLOSE_POPUP", "LOOTBUG_POPUP_CLOSE_TEMPLATE", "LOOTBUG_POPUP_CLOSE_ROI",
     )
-    _lootbug_roi_keys = ("LOOTBUG_DETECT_ROI", "LOOTBUG_BONUS_BUY_ROI")
+    _lootbug_roi_keys = ("LOOTBUG_DETECT_ROI", "LOOTBUG_BONUS_BUY_ROI", "LOOTBUG_POPUP_CLOSE_ROI")
     for k in _lootbug_keys:
         if k in lootbug:
             v = lootbug[k]

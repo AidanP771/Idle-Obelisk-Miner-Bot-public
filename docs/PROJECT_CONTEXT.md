@@ -25,7 +25,7 @@ templates; Rainbow Floors are detected using HSV values and hue distribution.
 | --- | --- |
 | `main.py` | Sets the working directory to the project root and starts `web.app.run_server()`. |
 | `tray_runner.py` | Starts the server in the background and provides the Windows tray menu for the WebUI, logs, restart, exit and local configuration reset. |
-| `web/app.py` | Flask/Socket.IO server, command queue, bot thread, status broadcasts every second and dashboard endpoints. |
+| `web/app.py` | Flask/Socket.IO server, command queue, bot thread, status broadcasts every second and dashboard endpoints. `run_server` refuses to start a second bot when the dashboard port is already in use (waits up to 5 s for a restarting instance). |
 | `bot_app.py` | Connects ADB, initializes runtime values, starts feature threads, processes commands and checks game state. The source sets `MAIN_LOOP_TICK` to 1.5 seconds. |
 | `config/settings.py`, `user_overrides.py` | Central defaults and application of `config/user_settings.json` at import time. |
 | `config/app_state.py`, `runtime_flags.py` | Shared mutable runtime state, action lock and exception-handling flag propagation. |
@@ -89,7 +89,13 @@ lazy imports to avoid circular imports. Level detection writes
   wait `LOOTBUG_BUY_RETRY_S` and verify with a fresh own-slot screenshot. A still
   visible Buy box or missing verification frame triggers another bounded attempt.
   Count once only when that fresh post-tap frame no longer matches Buy; this
-  observes disappearance, not the actual reward. No Close tap is issued.
+  observes disappearance, not the actual reward. No Close tap is issued unless
+  `LOOTBUG_CLOSE_POPUP` is enabled (default off): then, after a verified Buy and
+  after exhausted attempts, a fresh frame is checked for
+  `LOOTBUG_POPUP_CLOSE_TEMPLATE` in `LOOTBUG_POPUP_CLOSE_ROI` and the X is tapped
+  if visible. Game layouts differ: the reference setup of
+  [DEVELOPMENT_NOTES.md](DEVELOPMENT_NOTES.md) shows a "Free" offer instead of
+  "Buy Checked" and uses `Lootbug/lootbug_free.png` as Buy template.
   When no Lootbug is detected, also check for an existing Buy box and resume
   its bounded search, including after a Founders interruption. Cached detections
   are only hints; purchase taps always require a fresh match. Exhaustion aborts this cycle and
@@ -195,6 +201,13 @@ lazy imports to avoid circular imports. Level detection writes
   read -> craft -> buy round repeats while purchases happen, up to
   `SMART_CRAFT_MAX_ROUNDS` (default 3); then the menu is closed. Coin upgrades are never
   bought; bars are never sold.
+  Workshop (`SMART_CRAFT_WORKSHOP`, default on): each round also opens
+  Permanent -> Workshop (`workshop_header.png`) and reads the buyable rows
+  (up to three bar costs, "have/" above "need"; icons grouped per row). Their
+  costs join the Upgrades rows, so the crafting target per bar is the sum of
+  both. Buying keeps the user-chosen priority: regular Upgrades first, then
+  every Workshop row whose costs are all met and whose Buy button is bright,
+  verified on a fresh frame. Workshop upgrades are permanent (survive prestige).
   Surplus ore (`SMART_CRAFT_SELL_SURPLUS_ORE`, default off): only when the
   last round bought nothing (so its upgrade scan is current), the Sell page is
   opened (`sell_all_label.png`). Rows are found by their red Sell button

@@ -48,6 +48,27 @@ Measured at 900 x 1600, English UI. Coordinates are full-resolution pixels.
   measurement treats them as ambiguous ("list position unknown"), which ends
   the scan correctly.
 
+### Workshop (Permanent -> Workshop)
+- Header "Spend Bars on Permanent Upgrades!"; rows cost up to three bar types,
+  each shown as an icon with `have/` on one line and `need` below (grey text).
+- Rows seen 2026-11-23: Basic & Chain Damage (Mithril 85, Adamant 68, Runite 51),
+  Chain Bomb Amount (Adamant 211, Runite 169, Citrine 127), Unlock Infinity Bomb
+  (Runite 350, Citrine 300, Amethyst 250), Plenty Bomb Ore Multi (Citrine 300,
+  Amethyst 250, Topaz 200); below them "Unlock At Obelisk Level 5..8".
+- Upgrades are permanent. Priority chosen by the user: regular Upgrades first,
+  Workshop with what is left.
+- Three glyph variants (`1_3`, `1_4`, `2_3`) were added from Workshop text.
+
+### Lootbug popup
+- This setup shows two offers: a free one (green **Free** button, centre about
+  (283, 881)) and the same bonus for longer at 15 gems (red button). Offers
+  vary (Gems +2, Game Speed 2x, Ore Income 2x); the buttons do not.
+- The popup X sits at about (450, 1034); a 15 s timer closes it otherwise.
+- The shipped `lootbug_buy_bonus.png` ("Buy Checked") belongs to another game
+  layout and scores about 0.15 here. Local settings use
+  `Lootbug/lootbug_free.png` (ROI 150,780,420,980) and `LOOTBUG_CLOSE_POPUP`
+  with `Lootbug/lootbug_popup_close.png`. The paid offer is never tapped.
+
 ### Sell page
 - A row's own **Sell** button sells **one** ore per tap.
 - **Sell All** sells every unlocked row; first tap arms it (orange), second tap sells.
@@ -65,6 +86,13 @@ Measured at 900 x 1600, English UI. Coordinates are full-resolution pixels.
 - Main-screen timer at about (840, 490) shows yellow `0:00` when ready.
 - The fight needs a **hold** on the obelisk at (450, 800); a fight lasts about 34 s. ADB commands time out at 30 s, so the workflow holds 5 x 8 s.
 - After the fight: Exit, then "Return To Mines".
+- When the obelisk's HP reaches 0, the Fight tab shows an orange **Claim
+  Victory** button (about (450, 1230)) instead of Attack, and the main-screen
+  timer keeps showing `0:00`. Claiming returns to the mine with "Obelisk Level
+  N!" and "New Menu Unlocked! Check the Menu Hub". Obelisk 4 was claimed
+  2026-11-23 (rewards: obelisk level 3 -> 4, level cap 45 -> 50, Skill-Tree).
+- A plain `adb shell input tap` on Claim Victory was ignored; a short press
+  (the bot's tapper, or a 90 ms swipe) works.
 
 ### Prestige
 - Prestige page: "Earn Prestige Points (PP) at level 20+"; shows the PP gain.
@@ -86,7 +114,7 @@ replaces the default workflows. The reference setup uses:
 | --- | --- | --- |
 | `bomb_rotation_early_game` | on, 60 s | Optional panel open; Exp, Plenty (mark), Basic (break), wait 3 s, Chain, wait 3 s, Basic; single taps; each bomb in an `if template_visible` (0.9) so locked bombs are skipped; optional panel close. |
 | `obelisk_fight` | on, 300 s | If `obelisk/main_ready_tpl` is visible -> call `obelisk_fight_attack`. |
-| `obelisk_fight_attack` | helper | Obelisk button, Fight tab; damage warning or no ready Attack -> close; else Attack, hold (450,800) 5 x 8 s, optional Exit and Return To Mines. |
+| `obelisk_fight_attack` | helper | Obelisk button, Fight tab; Claim Victory visible (`obelisk/claim_victory_tpl`, 0.9) -> claim; damage warning or no ready Attack -> close; else Attack, hold (450,800) 5 x 8 s, optional Exit and Return To Mines. |
 | `auto_prestige` | on, 600 s | If `hud/level_capped_tpl` (0.9) is visible -> call `prestige`. |
 | `prestige` | helper | Open Prestige page; only if the Prestige button is visible -> close menu, call `prestige_execute`; else close menu. Drone points are therefore bought only right before a prestige. |
 | `prestige_execute` | helper | Sell All (two taps), call `buy_drone_points`, open Prestige page, press Prestige (2 clicks), close. |
@@ -102,6 +130,11 @@ Local settings (`config/user_settings.json`): `startup_defaults.SMART_CRAFT_ENAB
 Floor trips and surplus-ore selling are off unless enabled in the WebUI.
 
 Pitfalls:
+- Two bot processes (seen 2026-11-23: `tray_runner.py` and `main.py` started
+  5 s apart) both drove the emulator with separate action locks: menus were
+  closed under Smart Craft and API commands such as workflow reloads reached
+  only the instance owning port 6001. `run_server` now refuses to start a bot
+  when the port is taken. Check with the process list if behaviour looks doubled.
 - A WebUI tab opened before a workflow change still holds the old definitions;
   refresh before "Save Workflows" or it overwrites the change.
 - Workflows reload at execution boundaries (WebUI Reload or command
@@ -131,6 +164,7 @@ Pitfalls:
 - Floor trips: first live floor change not yet observed (confirmation dialog? clear counter reset?).
 - Surplus-ore selling: full sequence not yet run in game.
 - Smart Craft buys only bar-cost upgrades; gold-cost upgrades (Pickaxe Radius, Bomb Damage, ...) are not bought.
+- Workshop buying is not yet observed live (bars were 0 after the prestige).
 - Bomb rotation: pacing is fixed in the workflow; bomb charge counts are not read. Recharge upgrades change the ideal interval.
 - Bar types beyond World 1 floor 20 (VR-Demonite has an ore icon but no bar template yet) need templates as they unlock.
 - The default workflows in `config/config_workflows.py` still contain the original `auto_prestige` (level 127 plus an unconditional floor-Auto tap) and `close_pin_tpl`.

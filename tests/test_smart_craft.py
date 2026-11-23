@@ -275,6 +275,27 @@ class RoundTests(SmartCraftBase):
         f._close_menu = Mock()
         f.select_quantity_5x = Mock(return_value=True)
         f.craft_bar = Mock(return_value=5)
+        f.scan_workshop = Mock(return_value=[])
+        f.buy_workshop = Mock(return_value=0)
+
+    def test_workshop_needs_join_targets_and_are_bought_after_upgrades(self):
+        f = self.feature
+        f._floor_step = Mock()
+        f.scan_upgrades = Mock(return_value=[("runite", 10, 20, 400)])
+        f.scan_workshop = Mock(return_value=[("runite", 10, 350, 600), ("citrine", 0, 300, 600)])
+        order = []
+        f.buy_upgrades = Mock(side_effect=lambda g: order.append("upgrades") or 0)
+        f.buy_workshop = Mock(side_effect=lambda g: order.append("workshop") or 0)
+        f.run_cycle()
+        targets = {c.args[0]: c.args[2] for c in f.craft_bar.call_args_list}
+        self.assertEqual(targets, {"runite": 370, "citrine": 300})
+        self.assertEqual(order, ["upgrades", "workshop"])
+        self.settings.SMART_CRAFT_WORKSHOP = False
+        f.scan_workshop.reset_mock()
+        f.buy_workshop.reset_mock()
+        f.run_cycle()
+        f.scan_workshop.assert_not_called()
+        f.buy_workshop.assert_not_called()
 
     def test_rounds_repeat_while_purchases_happen(self):
         f = self.feature
@@ -296,6 +317,51 @@ class RoundTests(SmartCraftBase):
         f.craft_bar.reset_mock()
         self.assertEqual(f.run_cycle(), "nothing_needed")
         f.craft_bar.assert_not_called()
+
+
+class WorkshopTests(SmartCraftBase):
+    def setUp(self):
+        super().setUp()
+        self.settings.SMART_CRAFT_LIST_ROI = (40, 170, 860, 1395)
+        f = self.feature
+        f.find_bar_icons = Mock(return_value=[("mithril", 145, 596, 0.9), ("adamant", 330, 597, 0.9),
+                                              ("runite", 513, 597, 1.0), ("citrine", 145, 980, 0.9)])
+        # (icon x, icon y) -> ("have/" line, "need" line), as rendered in the Workshop
+        texts = {(145, 596): ("0/", "85"), (330, 597): ("0/", "68"),
+                 (513, 597): ("12/", "51"), (145, 980): ("300/", "300")}
+
+        def read_text(_g, roi):
+            for (ix, iy), (have, need) in texts.items():
+                if roi[0] == ix + 54 and roi[1] == iy - 6:
+                    return have
+                if roi[0] == ix + 54 and roi[1] == iy + 26:
+                    return need
+            return None
+        f.read_text = read_text
+        img = np.zeros((1600, 900, 3), np.uint8)
+        img[970:1010, 700:780, 2] = 170   # bright Buy for the citrine row
+        self.img = img
+        f._button = Mock(side_effect=lambda g, tpl, roi: {"found": True, "x": 700, "y": roi[1] + 50, "w": 80,
+                                                          "h": 40, "cx": 740, "cy": roi[1] + 70, "score": 1.0})
+
+    def test_groups_costs_per_row_and_reads_have_and_need(self):
+        rows = self.feature.read_workshop_rows(self.img, None)
+        self.assertEqual([r["costs"] for r in rows],
+                         [[("mithril", 0, 85), ("adamant", 0, 68), ("runite", 12, 51)],
+                          [("citrine", 300, 300)]])
+        self.assertEqual([r["affordable"] for r in rows], [False, True])
+
+    def test_buys_only_rows_with_all_costs_met(self):
+        f = self.feature
+        f._open_page = Mock(return_value=(self.img, None))
+        f.list_pages = lambda img, gray, gen: iter([(img, gray, 0)])
+        bought_frame = [{"costs": [("citrine", 0, 400)], "y": 980, "buy": (740, 980), "affordable": False}]
+        reads = [f.read_workshop_rows(self.img, None), bought_frame, bought_frame]
+        f.read_workshop_rows = Mock(side_effect=reads)
+        f._fresh = Mock(return_value=(self.img, None))
+        self.assertEqual(f.buy_workshop(f._run_generation), 1)
+        self.assertEqual(f.tap.call_count, 1)
+        self.assertEqual(self.state.smart_craft_upgrades_bought, 1)
 
 
 class TwoCostTests(SmartCraftBase):

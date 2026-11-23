@@ -273,8 +273,30 @@ def _local_ipv4_addrs():
     return sorted(addrs)
 
 
+def port_in_use(host, port) -> bool:
+    """True when another process already listens on (host, port)."""
+    import socket
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        try:
+            sock.bind((host, port))
+        except OSError:
+            return True
+    return False
+
+
 def run_server(host="0.0.0.0", port=6001, debug=False):
     """Start the web server and bot."""
+    # A second launch (e.g. tray and main.py) used to start a full second bot
+    # whose WebUI failed to bind; both then drove the same device with
+    # separate action locks. Refuse before any bot thread starts.
+    # Restarts launch the new process before the old one exits: wait briefly.
+    for _attempt in range(10):
+        if not port_in_use(host, port):
+            break
+        time.sleep(0.5)
+    else:
+        raise RuntimeError(f"port {port} is already in use - another bot instance is probably "
+                           f"running; not starting a second bot")
     start_state_pusher()
     start_bot_thread()
 

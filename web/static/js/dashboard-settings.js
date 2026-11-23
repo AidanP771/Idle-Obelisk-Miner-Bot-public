@@ -94,6 +94,7 @@ const FIELD_HINTS={
   'SMART_CRAFT_FLOOR_TRIPS':'when bars are short only because their ore does not drop on the current floor (World 1 floors 1-20, Tin through VR-Amethyst), move to the lower floor that drops it, switch floor Auto off, and return (Auto restored) after the trip time; turning Smart Craft off also returns',
   'SMART_CRAFT_FLOOR_TRIP_S':'seconds spent mining on the lower floor per trip (60-7200)',
   'SMART_CRAFT_SELL_SURPLUS_ORE':'after buying, lock the ores that buyable bar-cost upgrades still need (plus ores without a known bar), press Sell All twice, then unlock them again; rows you locked yourself stay locked; gold is not spent (drone points are bought only right before a prestige)',
+  'SMART_CRAFT_WORKSHOP':'also read the permanent Workshop upgrades (Permanent -> Workshop, up to three bar costs per row): their costs join the crafting targets, and after the regular Upgrades are bought every Workshop row whose costs are all met is bought; surplus-ore selling keeps their ores',
   'SMART_CRAFT_USE_5X':'switch the Craft page to 5x before crafting (about five times faster); the game keeps the mode afterwards',
   'SMART_CRAFT_MAX_PRESSES_PER_BAR':'maximum Craft presses per bar type and cycle (1-1000)',
   'SMART_CRAFT_MAX_BATCH':'Craft presses between two verification screenshots (1-100)',
@@ -128,6 +129,9 @@ const FIELD_HINTS={
   'LOOTBUG_BONUS_BUY_TEMPLATE':'buy-box template path relative to images/',
   'LOOTBUG_BONUS_BUY_ROI':'x1,y1,x2,y2 search area for the buy-box template; tap the matched center and verify disappearance',
   'LOOTBUG_LOG_LEVEL_BONUS':'bonus-purchase events — FULL | TXT | UI',
+  'LOOTBUG_CLOSE_POPUP':'tap the popup close button (X) when the popup is still open after a verified Buy or after LOOTBUG_BUY_MAX_ATTEMPTS; off = never close (original behaviour)',
+  'LOOTBUG_POPUP_CLOSE_TEMPLATE':'popup close-button template path relative to images/',
+  'LOOTBUG_POPUP_CLOSE_ROI':'x1,y1,x2,y2 search area for the popup close button',
   /* scroll */
   'SCROLL_DEFAULT_AREA':'x1, y1, x2, y2 rectangle for scrolls with no area given',
   'SCROLL_DEFAULT_SPEED':'slow | mid | fast',

@@ -317,7 +317,7 @@ def _menu_open(gray):
     return _button(gray, "workflows/menu/this_prestige/craft_tpl.png", _MENU_ROI)["found"]
 
 
-def _open_page(tile, ready, name, generation):
+def _open_page(tile, ready, name, generation, section="this_prestige"):
     """Open the main menu if needed, tap a page tile, wait until ready(img, gray)."""
     _check_cancel(generation)
     img, gray = _fresh()
@@ -330,7 +330,7 @@ def _open_page(tile, ready, name, generation):
         img, gray = _fresh()
         if not _menu_open(gray):
             raise _Abort("main menu did not open")
-    match = _button(gray, f"workflows/menu/this_prestige/{tile}.png", _MENU_ROI)
+    match = _button(gray, f"workflows/menu/{section}/{tile}.png", (10, 100, 890, 1579))
     if not match["found"]:
         raise _Abort(f"{name} tile not found (score={match['score']:.3f})")
     _tap(match["cx"], match["cy"], name)
@@ -481,6 +481,110 @@ def scan_upgrades(img, gray, generation):
         if not _button(gray, _tpl("buy.png"), _list_roi())["found"]:
             break  # only locked ("Unlock At Level") rows from here on
     return found
+
+
+# ============================================================
+#  Workshop: permanent upgrades (Permanent -> Workshop), up to three bar costs
+# ============================================================
+# Each cost is a bar icon with "have/" on one line and "need" below it.
+# Policy: Upgrades are bought first; Workshop rows are bought when affordable.
+
+_WORKSHOP_HEADER_ROI = (100, 90, 850, 180)
+_WORKSHOP_ICON_X = (120, 700)
+_WORKSHOP_HAVE = (54, -6, 140, 24)    # relative to the cost icon's top-left
+_WORKSHOP_NEED = (54, 26, 140, 60)
+_WORKSHOP_BUY = (640, -50, 880, 40)   # absolute x, y relative to the icons
+
+
+def _workshop_ready(_img, gray):
+    return _button(gray, _tpl("workshop_header.png"), _WORKSHOP_HEADER_ROI)["found"]
+
+
+def read_workshop_rows(img, gray):
+    """[{costs: [(bar, have, need)], y, buy: (x, y), affordable}] for Workshop
+    rows with a Buy button. A row with any unreadable cost is skipped."""
+    threshold = float(getattr(s, "SMART_CRAFT_ICON_THRESHOLD", 0.8))
+    _lx1, ly1, _lx2, ly2 = _list_roi()
+    icons = find_bar_icons(img, (_WORKSHOP_ICON_X[0], ly1, _WORKSHOP_ICON_X[1], ly2), threshold)
+    groups = []
+    for bar, x, y, _score in sorted(icons, key=lambda i: i[2]):
+        if groups and abs(groups[-1][0][2] - y) < 15:
+            groups[-1].append((bar, x, y))
+        else:
+            groups.append([(bar, x, y)])
+    rows = []
+    for group in groups:
+        top = min(y for _b, _x, y in group)
+        costs = []
+        for bar, x, y in sorted(group, key=lambda i: i[1]):
+            hx1, hy1, hx2, hy2 = _WORKSHOP_HAVE
+            nx1, ny1, nx2, ny2 = _WORKSHOP_NEED
+            have = parse_int((read_text(gray, (x + hx1, y + hy1, x + hx2, y + hy2)) or "").rstrip("/"))
+            need = parse_int(read_text(gray, (x + nx1, y + ny1, x + nx2, y + ny2)))
+            if have is None or need is None or need <= 0:
+                costs = None
+                _log(f"[SMART_CRAFT] Workshop {bar} cost at y={y} unreadable -> row skipped")
+                break
+            costs.append((bar, have, need))
+        if not costs:
+            continue
+        bx1, by1, bx2, by2 = _WORKSHOP_BUY
+        buy = _button(gray, _tpl("buy.png"), (bx1, max(0, top + by1), bx2, top + by2))
+        if not buy["found"]:
+            continue
+        patch = img[buy["y"]:buy["y"] + buy["h"], buy["x"]:buy["x"] + buy["w"]]
+        rows.append({"costs": costs, "y": top, "buy": (buy["cx"], buy["cy"]),
+                     "affordable": float(patch[:, :, 2].mean()) > _AFFORDABLE_MIN_RED})
+    return rows
+
+
+def scan_workshop(img, gray, generation):
+    """Read the Workshop list down to the locked section. Returns cost rows in
+    the Upgrades format [(bar, have, need, y)] so needs can be merged."""
+    found = []
+    for img, gray, offset in list_pages(img, gray, generation):
+        second = read_workshop_rows(*_fresh())  # numbers may animate: require two equal reads
+        for row in read_workshop_rows(img, gray):
+            if not any(r["costs"] == row["costs"] and abs(r["y"] - row["y"]) < 5 for r in second):
+                _log(f"[SMART_CRAFT] Workshop row at y={row['y']} not stable across frames -> skipped")
+                continue
+            absolute = row["y"] + offset
+            for bar, have, need in row["costs"]:
+                if not any(b == bar and abs(a - absolute) < 25 for b, _h, _n, a in found):
+                    found.append((bar, have, need, absolute))
+        if not _button(gray, _tpl("buy.png"), _list_roi())["found"]:
+            break  # only locked ("Unlock At Obelisk Level") rows from here on
+    return found
+
+
+def buy_workshop(generation):
+    """Tap Buy on Workshop rows whose every cost is met; a purchase counts only
+    when a fresh frame no longer shows the same affordable row."""
+    img, gray = _open_page("workshop_tpl", _workshop_ready, "Workshop", generation, section="permanent")
+    limit = int(getattr(s, "SMART_CRAFT_MAX_BUYS", 20))
+    bought = 0
+    for img, gray, _offset in list_pages(img, gray, generation):
+        while bought < limit:
+            _check_cancel(generation)
+            targets = [r for r in read_workshop_rows(img, gray)
+                       if r["affordable"] and all(h >= n for _b, h, n in r["costs"])]
+            if not targets:
+                break
+            row = targets[0]
+            summary = ", ".join(f"{b} {h}/{n}" for b, h, n in row["costs"])
+            _tap(*row["buy"], f"Workshop Buy ({summary})")
+            _delay()
+            img, gray = _fresh()
+            if any(r["costs"] == row["costs"] and abs(r["y"] - row["y"]) < 5 and r["affordable"]
+                   for r in read_workshop_rows(img, gray)):
+                _log(f"[SMART_CRAFT] Workshop Buy ({summary}) had no visible effect -> stop buying")
+                return bought
+            bought += 1
+            state.smart_craft_upgrades_bought += 1
+            _log(f"[SMART_CRAFT] bought Workshop upgrade ({summary})")
+        if bought >= limit or not _button(gray, _tpl("buy.png"), _list_roi())["found"]:
+            break
+    return bought
 
 
 def compute_shortfalls(rows):
@@ -1073,6 +1177,13 @@ def run_cycle(generation=None) -> str:
         for round_no in range(1, int(getattr(s, "SMART_CRAFT_MAX_ROUNDS", 3)) + 1):
             img, gray = _open_page("upgrades_tpl", _upgrades_ready, "Upgrades", generation)
             rows = scan_upgrades(img, gray, generation)
+            workshop = getattr(s, "SMART_CRAFT_WORKSHOP", True)
+            if workshop:
+                img, gray = _open_page("workshop_tpl", _workshop_ready, "Workshop", generation,
+                                       section="permanent")
+                ws_rows = scan_workshop(img, gray, generation)
+                _log(f"[SMART_CRAFT] Workshop: {len({r[3] for r in ws_rows})} buyable row(s)")
+                rows = rows + ws_rows
             shortfalls = compute_shortfalls(rows)
             summary = ", ".join(f"{b} {h}/{t}" for b, (h, t) in shortfalls.items()) or "none"
             first_summary = first_summary or summary
@@ -1085,7 +1196,11 @@ def run_cycle(generation=None) -> str:
                     quantity = "5x"
                 for bar, (have, target) in shortfalls.items():
                     crafted += craft_bar(bar, have, target, generation, quantity)
-            bought_now = buy_upgrades(generation) if getattr(s, "SMART_CRAFT_BUY_UPGRADES", True) else 0
+            bought_now = 0
+            if getattr(s, "SMART_CRAFT_BUY_UPGRADES", True):
+                bought_now = buy_upgrades(generation)       # Upgrades first (user policy)
+                if workshop:
+                    bought_now += buy_workshop(generation)
             bought += bought_now
             if not bought_now:
                 break

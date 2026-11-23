@@ -148,6 +148,9 @@ LOOTBUG_BUY_RETRY_S = 3.0             # fresh screenshot retry while Buy is obsc
 LOOTBUG_BUY_MAX_ATTEMPTS = 5          # release the action lock after exhausted Buy attempts
 LOOTBUG_TRIGGER_FOUNDERS_ON_BUY_FAILURE = False  # advance Founders or run one manual chain
 LOOTBUG_FOUNDERS_LOOKAHEAD_S = 5.0    # yield to enabled Founders when due within this window
+LOOTBUG_CLOSE_POPUP = False           # tap the popup's X after a Buy or exhausted attempts
+LOOTBUG_POPUP_CLOSE_TEMPLATE = "Lootbug/lootbug_popup_close.png"
+LOOTBUG_POPUP_CLOSE_ROI = (380, 960, 520, 1110)
 
 # Per-event log levels — set to FULL while testing, lower later.
 LOOTBUG_LOG_LEVEL = "TXT"             # general worker / scan messages
@@ -181,6 +184,7 @@ SMART_CRAFT_BUY_UPGRADES = True        # buy affordable bar-cost upgrades after 
 SMART_CRAFT_MAX_BUYS = 20              # upgrade purchases per cycle
 SMART_CRAFT_MAX_ROUNDS = 3             # read -> craft -> buy rounds per cycle (more levels)
 SMART_CRAFT_USE_5X = True              # switch the Craft page to 5x before crafting
+SMART_CRAFT_WORKSHOP = True            # also craft for and buy permanent Workshop upgrades (after Upgrades)
 SMART_CRAFT_FLOOR_TRIPS = False        # mine missing ore on a lower floor, then return
 SMART_CRAFT_FLOOR_TRIP_S = 600.0       # time spent on the lower floor per trip
 SMART_CRAFT_SELL_SURPLUS_ORE = False   # Sell All for ores no buyable bar-cost upgrade needs

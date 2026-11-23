@@ -142,6 +142,37 @@ class LootbugTests(unittest.TestCase):
         self.assertEqual(self.feature.get_screen.call_args.args, ("lootbug_scr",))
         self.assertTrue(self.feature.get_screen.call_args.kwargs["force"])
 
+    def enable_close(self):
+        self.settings.LOOTBUG_CLOSE_POPUP = True
+        self.settings.LOOTBUG_POPUP_CLOSE_TEMPLATE = "Lootbug/lootbug_popup_close.png"
+        self.settings.LOOTBUG_POPUP_CLOSE_ROI = (380, 960, 520, 1110)
+        self.close = {"found": True, "score": 0.99, "cx": 450, "cy": 1036}
+
+    def test_opt_in_close_after_verified_buy(self):
+        self.enable_close()
+        self.feature.find_template.side_effect = [
+            dict(self.hit), dict(self.hit), dict(self.miss),   # lootbug, Buy, Buy gone
+            dict(self.close), dict(self.miss)]                  # X visible, then gone
+        self.assertTrue(self.feature._run_scan_cycle())
+        self.assertEqual(self.feature.tap.call_count, 3)
+        self.assertEqual(self.feature.tap.call_args.args, (450, 1036))
+        self.assertEqual(self.feature.find_template.call_args_list[3].args[1],
+                         "Lootbug/lootbug_popup_close.png")
+        self.assertEqual(self.state.lootbug_bonus_count, 1)
+
+    def test_opt_in_close_after_exhausted_attempts_and_not_when_already_gone(self):
+        self.enable_close()
+        self.settings.LOOTBUG_BUY_MAX_ATTEMPTS = 1
+        self.feature.find_template.side_effect = [dict(self.hit), dict(self.miss),
+                                                  dict(self.close), dict(self.miss)]
+        self.assertTrue(self.feature._run_scan_cycle())
+        self.assertEqual(self.feature.tap.call_count, 2)    # lootbug + X
+        self.assertEqual(self.state.lootbug_bonus_count, 0)
+        self.feature.tap.reset_mock()
+        self.feature.find_template.side_effect = [dict(self.hit), dict(self.miss), dict(self.miss)]
+        self.feature._run_scan_cycle()
+        self.assertEqual(self.feature.tap.call_count, 1)    # popup already gone: no X tap
+
     def test_obscured_buy_box_retries_with_lock_and_never_closes(self):
         self.feature.find_template.side_effect = [dict(self.hit), dict(self.miss), dict(self.miss), dict(self.hit), dict(self.miss)]
         waits = []
