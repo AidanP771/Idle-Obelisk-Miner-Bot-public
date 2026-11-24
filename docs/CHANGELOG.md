@@ -12,7 +12,7 @@ Local, unversioned changes (`config/user_workflows.json`,
 
 ## 2026-11-24
 
-### Workshop costs with a '4' readable; misread diagnostics (this entry's commit)
+### Workshop costs with a '4' readable; misread diagnostics (`947f573`)
 - Problem: Workshop rows were skipped 248 times ("cost ... unreadable"): the
   third cost column draws the '4' one sub-pixel shifted, which matched no
   glyph reference clearly. New reference `images/smart_craft/digits/4_3.png`
