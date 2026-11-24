@@ -164,7 +164,7 @@ Templates for these workflows are versioned under `images/workflows/obelisk/`,
 `images/workflows/hud/` and `images/workflows/menu/close_menu_tpl.png`. The
 default `pins/close_pin_tpl.png` scores only about 0.65 on this setup.
 
-Local settings (`config/user_settings.json`): `startup_defaults.SMART_CRAFT_ENABLED = true`; `LOOTBUG_CHECK_INTERVAL_S` 15 (was 180, changed 2026-11-24);
+Local settings (`config/user_settings.json`): `startup_defaults.SMART_CRAFT_ENABLED = true`, `freebies_enabled` and `lootbug_enabled` true (2026-11-24); `FREEBIES_DIAMONDS_PER_CLAIM` 5 (was 28; this pack gives 5, gem statistics before 2026-11-24 are overcounted about 5.6x); `LOOTBUG_CHECK_INTERVAL_S` 15 (was 180, changed 2026-11-24);
 `SMART_CRAFT_INTERVAL_S` 300, floor trips and surplus-ore selling on (set by the
 user); Lootbug Free/close templates with `LOOTBUG_CLOSE_POPUP`;
 `FREEBIES_CLOSE_TEMPLATE = workflows/menu/close_menu_tpl.png`. Defaults in
@@ -233,7 +233,6 @@ Pitfalls:
 - `SMART_CRAFT_YIELD` and the Freebies close template: verify after the next restart (`pausing for waiting workflow(s)`, `tap close-menu`).
 - `buy_drone_points` cannot tell whether the exchange bought anything (gold below one drone point's price); reading the drone point counter before/after would make that visible.
 - Whether drone upgrades survive prestige: compare before/after the next prestige.
-- `FREEBIES_DIAMONDS_PER_CLAIM` is 28 but this pack gives 5; the pack banks 2 claims and the feature claims one per visit.
 - Skill-Tree (unlocked at Obelisk 4): automation ideas from the wiki discussed, nothing built (user: explore as we go).
 - An Upgrades pin was added to the bottom bar by a stray tap (harmless; remove via Setup Pins).
 - Bomb rotation: one round every 30 s; charge counts are not read, so empty bombs get a no-op tap. Recharge upgrades change the ideal interval.

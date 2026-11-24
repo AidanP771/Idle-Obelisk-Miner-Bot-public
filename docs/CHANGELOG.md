@@ -276,3 +276,5 @@ Backups of each step are kept in the session scratchpad, not in the repo.
 | 2026-11-24 | `user_settings.json` | `LOOTBUG_CHECK_INTERVAL_S` 180 -> 15 (scans no longer take the action lock). |
 | 2026-11-24 | `user_workflows.json` | `obelisk_fight_attack`: `defer` 900 s in the damage-warning branch (needs the restart that brings the new step type). |
 | 2026-11-24 | `user_workflows.json` | `bomb_rotation_early_game`: Plenty/Basic/Chain conditions `use_prev_screenshot` (needs the restart). |
+| 2026-11-24 | `user_settings.json` | `startup_defaults.freebies_enabled` and `lootbug_enabled` true (both stayed off after every restart). |
+| 2026-11-24 | `user_settings.json` | `FREEBIES_DIAMONDS_PER_CLAIM` 28 -> 5 (the pack gives 5; earlier gem statistics are overcounted). |
