@@ -12,7 +12,7 @@ Local, unversioned changes (`config/user_workflows.json`,
 
 ## 2026-11-24
 
-### Pause after current (this entry's commit)
+### Pause after current (`1c199b1`)
 - Request: a WebUI option to pause the automation queue after the current
   automation has finished.
 - New dashboard button **Pause after current** (command
