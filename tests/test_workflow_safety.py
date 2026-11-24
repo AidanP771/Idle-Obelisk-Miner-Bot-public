@@ -47,6 +47,18 @@ class WorkflowSafetyTests(unittest.TestCase):
             self.assertEqual(self.w._eval_condition(condition, {}, False, "fail_wf"),
                              (kind == "template_visible", False))
 
+    def test_condition_can_reuse_the_previous_screenshot(self):
+        self.w.get_screen.return_value = (object(), 900, 1600)
+        self.w.find_template.return_value = {"found": True, "score": 1}
+        self.w._eval_condition({"kind": "template_visible", "template": "x"}, {}, False, "false")
+        self.assertTrue(self.w.get_screen.call_args.kwargs["force"])
+        self.w._eval_condition({"kind": "template_visible", "template": "x", "use_prev_screenshot": True},
+                               {}, False, "false")
+        self.assertFalse(self.w.get_screen.call_args.kwargs["force"])
+        from config.validation import validate_workflows
+        validate_workflows({"wf": {"steps": [{"type": "if", "branches": [{"condition": {
+            "kind": "template_visible", "template": "x", "use_prev_screenshot": True}, "steps": []}]}]}})
+
     def test_all_tap_step_types_abort_repetition_on_failure_even_if_optional(self):
         hit = {"found": True, "score": 1, "cx": 10, "cy": 20, "angle": 0, "rotations_tried": 1}
         self.w.get_screen.return_value = (object(), 900, 1600)

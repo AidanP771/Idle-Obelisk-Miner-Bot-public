@@ -221,6 +221,11 @@ lazy imports to avoid circular imports. Level detection writes
   coin icon and no bar icon in the row). The gold amount is not parsed; a
   purchase counts when a fresh frame shows the row no longer affordable or its
   cost text changed, otherwise buying stops.
+  Yield policy (2026-11-24): Smart Craft pauses at once for the slugs in
+  `SMART_CRAFT_YIELD_PRIORITY` (default `obelisk_fight,auto_prestige,lootbug`);
+  other waiting workflows (bombs) only once they have waited
+  `SMART_CRAFT_YIELD_MIN_WAIT_S` (45 s; first busy attempt in
+  `state.workflows_waiting_since`). During a pause every waiting workflow runs.
   Pausing (`SMART_CRAFT_YIELD`, default on): a cycle holds the action lock for
   minutes. Auto workflows that find the lock busy are recorded in
   `state.workflows_waiting` (slug -> time, entries older than 30 s are ignored).
@@ -444,6 +449,8 @@ rationale is not documented:
   floor-trip return when Smart Craft is switched off are not gated. The
   dashboard derives *Pausing…* from `action_lock.locked`. A new feature that
   takes the action lock must check the flag too.
+- Workflow `if` conditions accept `use_prev_screenshot` (reuse the workflow's
+  last frame if it is at most `WORKFLOWS_SCREEN_REUSE_AGE_S` old) like click steps.
 - Workflow step `defer` (`seconds`): the next automatic run of the top-level
   workflow (also when reached inside a called helper) is not before now +
   seconds; the current run continues. Used to back off when a check cannot

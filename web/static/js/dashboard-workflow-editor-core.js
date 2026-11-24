@@ -295,7 +295,8 @@ function collectWorkflows(){
         const k = el.dataset.condField;
         let v = el.value;
         const ft = el.dataset.ftype;
-        if(ft==='num' && v!=='') v = parseFloat(v);
+        if(el.tagName==='SELECT' && (v==='true'||v==='false')) v = (v==='true');
+        else if(ft==='num' && v!=='') v = parseFloat(v);
         else if(ft==='num' && v==='') v = null;
         else if(ft==='roi') v = v.trim()==='' ? [] : v.split(',').map(s=>Number(s.trim()));
         condObj[k] = v;

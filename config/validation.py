@@ -159,6 +159,8 @@ SETTINGS = {
            "SMART_CRAFT_CRAFT_TARGET": choice("next", "all"),
            "SMART_CRAFT_WORKSHOP": boolean,
            "SMART_CRAFT_YIELD": boolean,
+           "SMART_CRAFT_YIELD_PRIORITY": text,
+           "SMART_CRAFT_YIELD_MIN_WAIT_S": number(0, 3600),
            "SMART_CRAFT_FLOOR_TRIPS": boolean,
            "SMART_CRAFT_FLOOR_TRIP_S": number(60, 7200),
            "SMART_CRAFT_SELL_SURPLUS_ORE": boolean,
@@ -246,7 +248,8 @@ WF = {"name": text, "description": text, "order": number(-100000, integer=True),
       "steps": lambda v, p: None}
 CONDITION = {"kind": choice("template_visible", "template_not_visible", "level_eq", "level_gte",
     "level_lte", "last_step_ok", "last_step_failed"), "template": text,
-    "roi": optional_roi, "threshold": UNIT, "value": optional(number(1, 999, integer=True))}
+    "roi": optional_roi, "threshold": UNIT, "value": optional(number(1, 999, integer=True)),
+    "use_prev_screenshot": boolean}
 
 
 def _validate_steps(steps, path, definitions, depth=0, inactive=False):

@@ -172,6 +172,8 @@ function renderConditionEditor(cond, condPath){
     const roiStr = Array.isArray(cond.roi) ? cond.roi.join(', ') : (cond.roi || '');
     h += `<div class="wfe-cond-row"><label>ROI</label><input data-cond-field="roi" data-ftype="roi" value="${esc(roiStr)}" placeholder="x1, y1, x2, y2"></div>`;
     h += `<div class="wfe-cond-row"><label>Threshold</label><input type="number" data-cond-field="threshold" data-ftype="num" step="0.01" value="${cond.threshold!=null?cond.threshold:0.8}"></div>`;
+    const prev = !!cond.use_prev_screenshot;
+    h += `<div class="wfe-cond-row" title="Reuse the last workflow screenshot (a few seconds old at most) instead of capturing a new one"><label>Use Prev Screenshot</label><select data-cond-field="use_prev_screenshot"><option value="false"${prev?'':' selected'}>false</option><option value="true"${prev?' selected':''}>true</option></select></div>`;
   } else if(kind === 'level_eq' || kind === 'level_gte' || kind === 'level_lte'){
     h += `<div class="wfe-cond-row"><label>Value</label><input type="number" data-cond-field="value" data-ftype="num" step="1" value="${cond.value!=null?cond.value:1}"></div>`;
     if(!lvlEnabled){

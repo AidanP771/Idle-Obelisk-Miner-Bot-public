@@ -40,6 +40,7 @@ workflows_running = None
 # Auto workflows whose last attempt found the action lock busy:
 # slug -> time of that attempt. Long lock holders (Smart Craft) pause for them.
 workflows_waiting = {}
+workflows_waiting_since = {}   # slug -> first busy attempt of the current wait (Smart Craft yield policy)
 
 # ========= Feature flags =========
 gem_statistics_enabled = True

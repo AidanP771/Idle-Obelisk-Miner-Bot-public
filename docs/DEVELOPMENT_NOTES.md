@@ -149,7 +149,7 @@ replaces the default workflows. The reference setup uses:
 
 | Slug | Auto | Purpose |
 | --- | --- | --- |
-| `bomb_rotation_early_game` | on, 30 s | Optional close of a leftover menu (`menu/close_menu_tpl`, ROI [405,1471,658,1546]: 1.0 with a menu open, <= 0.27 on the main screen over 239 frames); optional panel open; one round of Exp, Plenty (mark), Basic (break), Chain - one tap each, each bomb in an `if template_visible` (0.9) so locked bombs are skipped; optional panel close. About 10 s per run (2026-11-24; was 5 rounds every 90 s, 57 s per run). |
+| `bomb_rotation_early_game` | on, 30 s | Optional close of a leftover menu (`menu/close_menu_tpl`, ROI [405,1471,658,1546]: 1.0 with a menu open, <= 0.27 on the main screen over 239 frames); optional panel open; one round of Exp, Plenty (mark), Basic (break), Chain - one tap each, each bomb in an `if template_visible` (0.9) so locked bombs are skipped; optional panel close. About 10 s per run (2026-11-24; was 5 rounds every 90 s, 57 s per run). The Plenty/Basic/Chain checks reuse the previous frame (`use_prev_screenshot`, 2026-11-24), 3 screenshots less per run. |
 | `bomb_basic_rotation_all` | off, inactive | Original default rotation (2 s holds); `enabled_default` false so it stays off after restarts. |
 | `obelisk_fight` | on, 60 s (only a screenshot when not ready) | If `obelisk/main_ready_tpl` is visible -> call `obelisk_fight_attack`. |
 | `obelisk_fight_attack` | helper | Tap the obelisk HUD button at (843,440) (fixed position: its icon changes with every obelisk level, so `obelisk_button_tpl` stopped matching after Obelisk 4), Fight tab; Claim Victory visible (`obelisk/claim_victory_tpl`, 0.9) -> claim; damage warning or no ready Attack -> close; else Attack, hold (450,800) 5 x 8 s, optional Exit and Return To Mines. The damage-warning branch ends with `defer` 900 s (2026-11-24): one check per 15 min instead of one per minute while the pickaxe is too weak. |
@@ -218,6 +218,8 @@ Pitfalls:
 
 ## Open Items
 
+- `buy_drone_points` cannot see whether points were bought (gold below one point's price); a digit-reading workflow step for the drone point counter would make it visible (audit item 12, not built).
+- Smart Craft yield policy (2026-11-24): check that bombs now run about once per 45-60 s during a cycle and that cycles pause less often.
 - Restart pending (2026-11-24, all code since `267d269`): floor-trip Auto handling, gold upgrades option, Pause after current, Lootbug lock waiting, craft target `next`, exec-out screenshots, page polling, the new '4' glyph. After the restart check the log for `method=exec_out`, `floor trip ... returning after`, `[LOOTBUG] lootbug visible ... waiting`, and Smart Craft cycle length. Floor Auto was off on 2026-11-24 and must be switched on once by hand.
 - Obelisk timer scheduling (not built): the HUD countdown (`m:ss`, about (805-885, 475-505)) uses the pixel font at 17 px height; the Smart Craft glyph set reads only some digits there, and ':' breaks segmentation. It needs its own digit references and a workflow step that sets the next due time. Current cost of polling: one screenshot per 60 s, at most about 60 s late per 20 min cooldown.
 - Smart Craft "list position unknown after scrolling": the two dumped cases (2026-11-24) were the Workshop list scrolled past its last buyable row into near-identical "Unlock At Obelisk Level N" rows (no rows missed). Lists now stop once locked rows show below every Buy button; watch whether the warning still appears. Frames are still dumped to `temp/smart_craft_debug/`.

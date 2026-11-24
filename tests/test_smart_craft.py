@@ -870,6 +870,20 @@ class YieldTests(SmartCraftBase):
         self.assertEqual(self.feature.select_quantity_5x.call_count, 2)
         self.assertFalse(self.state.ingame_action_lock.locked())
 
+    def test_non_priority_workflows_wait_for_the_minimum_before_a_pause(self):
+        f = self.feature
+        self.settings.SMART_CRAFT_YIELD_MIN_WAIT_S = 45.0
+        self.state.workflows_waiting_since = {}
+        self.crafting_waits_for = "bomb_rotation_early_game"
+        self.state.workflows_waiting_since["bomb_rotation_early_game"] = 100.0 - 10   # waited 10 s
+        f._try_run_with_lock()
+        f._wake_workflows.assert_not_called()
+        self.state.workflows_waiting_since["bomb_rotation_early_game"] = 100.0 - 50   # waited 50 s
+        self.events.clear()
+        f._try_run_with_lock()
+        self.assertTrue(f._wake_workflows.called)
+        self.assertEqual(f._yield_due(["lootbug", "other"]), ["lootbug"])           # priority: at once
+
     def test_stale_waiting_entries_and_disabled_setting_are_ignored(self):
         self.state.workflows_waiting["old"] = 100.0 - 60
         self.feature._try_run_with_lock()
@@ -887,7 +901,7 @@ class YieldTests(SmartCraftBase):
         self.assertFalse(self.state.ingame_action_lock.locked())
 
     def test_cancel_during_the_pause_neither_taps_nor_double_releases(self):
-        self.crafting_waits_for = "bombs"
+        self.crafting_waits_for = "obelisk_fight"
         f = self.feature
 
         def cancel_while_waiting():

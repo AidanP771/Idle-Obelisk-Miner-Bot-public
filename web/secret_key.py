@@ -22,15 +22,22 @@ def load_or_create_secret_key(path: Path) -> str:
                 json.dump({"secret_key": secrets.token_hex(32)}, temporary)
                 temporary.flush()
                 os.fsync(temporary.fileno())
-            try:
-                # Windows rename refuses to overwrite an existing destination.
-                # On POSIX, use a hard link for the same atomic no-replace behavior.
-                if os.name == "nt":
-                    os.rename(temporary_path, path)
-                else:
-                    os.link(temporary_path, path)
-            except FileExistsError:
-                pass
+            for attempt in range(6):
+                try:
+                    # Windows rename refuses to overwrite an existing destination.
+                    # On POSIX, use a hard link for the same atomic no-replace behavior.
+                    if os.name == "nt":
+                        os.rename(temporary_path, path)
+                    else:
+                        os.link(temporary_path, path)
+                    break
+                except FileExistsError:
+                    break
+                except PermissionError:
+                    # A scanner or a concurrent start can hold the new file briefly.
+                    if attempt == 5:
+                        raise
+                    time.sleep(0.02 * (attempt + 1))
         finally:
             if temporary_path is not None:
                 temporary_path.unlink(missing_ok=True)

@@ -12,6 +12,23 @@ Local, unversioned changes (`config/user_workflows.json`,
 
 ## 2026-11-24
 
+### Audit phase 3: fewer pauses, fewer screenshots, safe key file (this entry's commit)
+- Smart Craft yield policy: pause at once only for
+  `SMART_CRAFT_YIELD_PRIORITY` (`obelisk_fight,auto_prestige,lootbug`); other
+  waiting workflows (bombs every 30 s) only after
+  `SMART_CRAFT_YIELD_MIN_WAIT_S` (45 s). Before, every bomb run interrupted a
+  cycle (close menu, reopen page, reselect 5x: 3-5 s each). New
+  `state.workflows_waiting_since` (workflows and Lootbug). WebUI hints.
+- Workflow conditions accept `use_prev_screenshot`; the bomb rotation's
+  Plenty/Basic/Chain checks reuse the frame of the previous Fire step.
+- `web/secret_key.py` retries the key file rename on `PermissionError`
+  (same Windows pattern as the JSON saves; flaky test).
+- Not built: drone point check (audit item 12, open item).
+- Verified: 315 Python and 27 JS tests (three clean runs); engine dry run of
+  the bomb rotation. Needs a restart (the running bot does not know the new
+  condition field).
+
+
 ### Audit phase 2: reliability and logs (`1f89f2f`)
 - `_craft_ready` needs a 1x/5x quantity button and no Workshop header; it
   accepted Workshop frames before (the Workshop's third cost column has bar
@@ -258,3 +275,4 @@ Backups of each step are kept in the session scratchpad, not in the repo.
 | 2026-11-24 | `user_workflows.json` | `buy_drone_points` swipe area [80,420,820,1350] (the default area started the finger on the Drone Suits tab); confirmed live 10:50. |
 | 2026-11-24 | `user_settings.json` | `LOOTBUG_CHECK_INTERVAL_S` 180 -> 15 (scans no longer take the action lock). |
 | 2026-11-24 | `user_workflows.json` | `obelisk_fight_attack`: `defer` 900 s in the damage-warning branch (needs the restart that brings the new step type). |
+| 2026-11-24 | `user_workflows.json` | `bomb_rotation_early_game`: Plenty/Basic/Chain conditions `use_prev_screenshot` (needs the restart). |

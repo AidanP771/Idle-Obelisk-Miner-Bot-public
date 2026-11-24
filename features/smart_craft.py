@@ -392,6 +392,20 @@ def _waiting_workflows():
     return sorted(slug for slug, ts in waiting.items() if now - ts <= _WAITING_MAX_AGE_S)
 
 
+def _yield_due(waiting):
+    """The waiting entries Smart Craft pauses for now: priority ones at once
+    (SMART_CRAFT_YIELD_PRIORITY), the others (e.g. bombs) only after waiting
+    SMART_CRAFT_YIELD_MIN_WAIT_S, so short-interval workflows do not interrupt
+    every step of a cycle."""
+    priority = {name.strip() for name in
+                str(getattr(s, "SMART_CRAFT_YIELD_PRIORITY", "obelisk_fight,auto_prestige,lootbug")).split(",")
+                if name.strip()}
+    min_wait = float(getattr(s, "SMART_CRAFT_YIELD_MIN_WAIT_S", 45.0))
+    since = dict(getattr(state, "workflows_waiting_since", {}) or {})
+    now = time.time()
+    return [slug for slug in waiting if slug in priority or now - since.get(slug, now) >= min_wait]
+
+
 def _wake_workflows():
     try:
         from features import workflows
@@ -411,7 +425,7 @@ def _yield_point(generation) -> bool:
     if getattr(state, "automation_paused", False):
         return False  # paused workflows will not run; finish this cycle instead
     waiting = _waiting_workflows()
-    if not waiting:
+    if not _yield_due(waiting):
         return False
     _check_cancel(generation)
     _close_menu()

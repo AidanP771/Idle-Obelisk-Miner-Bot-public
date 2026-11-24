@@ -304,6 +304,9 @@ def _acquire_when_seen(lock) -> str:
     _log(f"[LOOTBUG] lootbug visible, another feature is busy -> waiting up to {wait_s:.0f}s "
          "for the action lock", "LOOTBUG_LOG_LEVEL_BUSY")
     waiting = getattr(state, "workflows_waiting", None)
+    since = getattr(state, "workflows_waiting_since", None)
+    if since is not None:
+        since.setdefault("lootbug", time.time())
     slices = max(1, int(math.ceil(wait_s / 5.0)))
     try:
         for _ in range(slices):  # 5 s slices so the waiting entry stays fresh
@@ -317,6 +320,8 @@ def _acquire_when_seen(lock) -> str:
     finally:
         if waiting is not None:
             waiting.pop("lootbug", None)
+        if since is not None:
+            since.pop("lootbug", None)
     _log("[LOOTBUG] action lock still busy -> postponing", "LOOTBUG_LOG_LEVEL_BUSY")
     return ""
 

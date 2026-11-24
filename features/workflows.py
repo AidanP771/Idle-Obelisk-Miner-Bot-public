@@ -686,7 +686,9 @@ def _eval_condition(cond: dict, wf: dict, last_ok: bool, on_missing: str):
         tpl_path = tpl_name if tpl_name.startswith("workflows/") else f"workflows/{tpl_name}"
         if not tpl_path.lower().endswith((".png", ".jpg", ".bmp")):
             tpl_path += ".png"
-        img = _wf_screen(force=True)
+        # use_prev_screenshot: reuse the workflow's last frame (<= WORKFLOWS_SCREEN_REUSE_AGE_S)
+        # when nothing relevant changed since, e.g. checking several bomb icons in a row.
+        img = _wf_screen(force=not bool(cond.get("use_prev_screenshot", False)))
         if img is None:
             return False, (on_missing == "fail_wf")
         roi = cond.get("roi")
@@ -1007,10 +1009,15 @@ def _scheduler_tick():
             rt["last_run_ts"] = time.time()
             if result == "ok":
                 rt["run_count"] = rt.get("run_count", 0) + 1
+            since = getattr(state, "workflows_waiting_since", None)
             if result == "busy":
                 state.workflows_waiting[slug] = time.time()
+                if since is not None:
+                    since.setdefault(slug, time.time())
             else:
                 state.workflows_waiting.pop(slug, None)
+                if since is not None:
+                    since.pop(slug, None)
             if result == "busy":
                 rt["next_due_ts"] = time.time() + float(getattr(s, "WORKFLOWS_BUSY_RETRY_S", 10.0))
             elif result == "no_game":
@@ -1113,6 +1120,7 @@ def toggle_wf(slug: str) -> bool:
     else:
         rt["next_due_ts"] = 0.0
         state.workflows_waiting.pop(slug, None)
+        getattr(state, "workflows_waiting_since", {}).pop(slug, None)
     _log(f"[WORKFLOWS] {slug} auto -> {'ON' if rt['enabled'] else 'OFF'}")
     return rt["enabled"]
 
