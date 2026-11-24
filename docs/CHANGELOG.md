@@ -12,7 +12,7 @@ Local, unversioned changes (`config/user_workflows.json`,
 
 ## 2026-11-24
 
-### Audit phase 1: obelisk back-off, skip missing Craft rows, stop at locked rows (this entry's commit)
+### Audit phase 1: obelisk back-off, skip missing Craft rows, stop at locked rows (`3e8590b`)
 - Audit (after the 11:19 restart): the obelisk was opened every minute only to
   find the damage warning; Smart Craft spent 9-14 s per round searching the
   Craft list for each bar not unlocked yet; every Workshop scan scrolled once
