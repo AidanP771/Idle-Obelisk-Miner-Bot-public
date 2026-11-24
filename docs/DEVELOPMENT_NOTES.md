@@ -91,7 +91,8 @@ Measured at 900 x 1600, English UI. Coordinates are full-resolution pixels.
 - The digit reader cannot read most multi-digit counts on this page (different glyph rendering); sales are verified by a change of the count box instead.
 
 ### Floors
-- HUD button at about (843, 658) opens Floor Select; Auto toggle at about (843, 867), green = on.
+- HUD button at about (843, 658) opens Floor Select; Auto toggle at about (843, 867): green = on, dark maroon (median BGR about 8,4,41; seen 2026-11-24) = off. The old reader only knew bright red and reported off as "not recognised".
+- Picking a floor in Floor Select appears to switch Auto off (inferred 2026-11-24 from the log: Auto was on before the 19 -> 11 trips and off afterwards; not watched directly). Smart Craft therefore reads Auto before moving.
 - Floor Select shows World 1 as a fixed two-column grid (odd floors left at x 342, even right at x 692, row 0 at y 184, pitch 51.65); current floor is green, unlocked red. 21 rows fit, so World 1 needs no scrolling.
 - The number under the floor button is the clear counter, not the floor.
 - After a prestige: floor 1, floor Auto stayed **on**.
@@ -120,11 +121,15 @@ Measured at 900 x 1600, English UI. Coordinates are full-resolution pixels.
 - The Drones page also keeps its scroll position. On 2026-11-23 23:12 a single mid swipe did not reach the top, the fixed-coordinate Max/exchange taps missed, and the prestige ran with unspent gold. Fixed with templates and three fast swipes.
 - Saving workflows from a WebUI editor that was opened before a file edit overwrites that edit (22:51: an interval change dropped the Prestige scroll step).
 - Wiki (Prestige page): Drone Points are permanent (kept on prestige), as are Relics, Artifacts, Veins, bomb charges, challenge progress and items. The wiki does not say whether drone upgrades bought with Drone Points are kept; unverified.
+- The Drones page has top tabs Drone Upgrades / Drone Suits / Suit Upgrades and remembers the last one; the exchange panel is only on Drone Upgrades (2026-11-24: the page was on Drone Suits and every `buy_drone_points` since 05:00 failed, 30 times).
+- A swipe with the default area (0,102,900,1457) and direction down starts the finger at (450,122), on the Drone Suits tab; the workflow swipe therefore uses area [80,420,820,1350] (inferred cause, live check pending).
 - Drones page "Exchange Gold for Drone Points": quantity buttons 1x/5x/25x/250x/Max at y 250 (Max x 716), exchange button at (450, 352).
 
 ### Bombs
 - Bomb panel toggle at about (816, 1302). Selected bomb shows its recharge timer; counts show at the icon (yellow `5` observed when full; the cap was 5 for all four bombs).
 - Holding **Fire** fires rapidly; a tap fires one charge.
+- The panel shows each bomb's charge count; the Bomb Bear suit (maxed) fires a Basic bomb by itself when Basic is at max capacity, so Basic charges are not wasted.
+- A 5-round rotation took 57 s and held the action lock 63% of the time at a 90 s interval (2026-11-24); one round per run every 30 s takes 10-11 s.
 - After a Basic bomb the floor turns over (fresh rock set) about **2.6 s** later. Charges fired inside that window hit already broken rocks.
 
 ## Local Workflow Setup (not versioned)
@@ -134,14 +139,14 @@ replaces the default workflows. The reference setup uses:
 
 | Slug | Auto | Purpose |
 | --- | --- | --- |
-| `bomb_rotation_early_game` | on, 90 s | Optional panel open; 5 rounds of Exp, Plenty (mark), Basic (break), Chain - one tap each, 3 s between rounds so each round hits fresh rocks; each bomb in an `if template_visible` (0.9) so locked bombs are skipped; optional panel close. 5 rounds = observed charge cap; verified 2026-11-23: after a run Exp/Plenty/Chain 0, Basic 1 (recharged during the run). Raise the round count if Bomb Capacity grows. |
+| `bomb_rotation_early_game` | on, 30 s | Optional close of a leftover menu (`menu/close_menu_tpl`, ROI [405,1471,658,1546]: 1.0 with a menu open, <= 0.27 on the main screen over 239 frames); optional panel open; one round of Exp, Plenty (mark), Basic (break), Chain - one tap each, each bomb in an `if template_visible` (0.9) so locked bombs are skipped; optional panel close. About 10 s per run (2026-11-24; was 5 rounds every 90 s, 57 s per run). |
 | `bomb_basic_rotation_all` | off, inactive | Original default rotation (2 s holds); `enabled_default` false so it stays off after restarts. |
 | `obelisk_fight` | on, 60 s (only a screenshot when not ready) | If `obelisk/main_ready_tpl` is visible -> call `obelisk_fight_attack`. |
 | `obelisk_fight_attack` | helper | Tap the obelisk HUD button at (843,440) (fixed position: its icon changes with every obelisk level, so `obelisk_button_tpl` stopped matching after Obelisk 4), Fight tab; Claim Victory visible (`obelisk/claim_victory_tpl`, 0.9) -> claim; damage warning or no ready Attack -> close; else Attack, hold (450,800) 5 x 8 s, optional Exit and Return To Mines. |
 | `auto_prestige` | on, 600 s | If `hud/level_capped_tpl` (0.9) is visible -> call `prestige`. |
 | `prestige` | helper | Open Prestige page, swipe down twice (scroll to top); only if the Prestige button is visible -> close menu, call `prestige_execute`; else close menu. Drone points are therefore bought only right before a prestige. |
 | `prestige_execute` | helper | Sell All (two taps), call `buy_drone_points`, open Prestige page, press Prestige (2 clicks), close. |
-| `buy_drone_points` | helper | Drones -> Upgrades tab, swipe down 3x (scroll to top), click `drones/drone_max_tpl`, click `drones/drone_exchange_tpl`. Both are required: a miss aborts the chain, so no prestige happens with unspent gold. |
+| `buy_drone_points` | helper | Drones -> Upgrades nav, tap the "Drone Upgrades" top tab ([150,112,340,148]), swipe down 3x in area [80,420,820,1350] (scroll to top), click `drones/drone_max_tpl` (optional), `if last_step_failed` -> close menu + re-check Max (fails), click `drones/drone_exchange_tpl` (optional), same check. A miss closes the Drones menu and aborts the chain, so no prestige happens with unspent gold and no menu is left open. |
 | `level_up_early_game` | off | Aborts at the locked Contracts tile and leaves the menu open; competes with Smart Craft. |
 | `craft_upgrades_early_game` | inactive | Replaced by Smart Craft. |
 
@@ -174,6 +179,9 @@ Pitfalls:
   end before matching or tapping, and prefer templates over fixed coordinates.
 - A long lock holder starves time-critical workflows; look for
   `postponed - another feature busy` when timing looks off.
+- An aborted workflow leaves its menu open; every later HUD-based workflow then silently matches nothing (2026-11-24: the Drones menu stayed open after each failed prestige until Smart Craft closed it). Close the menu before a deliberate abort, and let a frequent workflow close leftover menus first.
+- A deliberate abort without nested `if`: an optional click, then `if last_step_failed` -> close menu + a non-optional click on the same missing template.
+- Before `reload_cfg`, validate an edited `user_workflows.json` with `config.config_workflows.load_workflow_definitions()` (it rejected nested `if` blocks that the JSON itself allowed) and dry-run it through the engine with mocked screens (see Verification Methods).
 - Workflow matching is grayscale; a step cannot tell a green toggle from a red one (a 1x/5x button matched both states at 0.95+).
 
 ## Verification Methods
@@ -188,6 +196,8 @@ Pitfalls:
   when `/api/state` shows the lock free; a check is not a lock (a stray tap hit
   "Setup Pins" twice on 2026-11-23). Screenshots are fine. For taps use a
   workflow run (`wf_run:<slug>`) or ask the user to pause the bot.
+- Workflow dry run: load the edited definitions and run `_run_workflow` from `features/workflows.py` with the test fixture of `tests/test_screenshot_consumers.py` and a `find_template` mock that decides per template name; this checks branches and aborts without ADB.
+- Watching a run: poll `/api/screenshot` (read-only) once a second after the run's `starting` log line.
 - Logs: `bot.log` in the project root, rotated to `bot.log.1..3` at 2 MB.
   Prefer read-only navigation; anything that spends resources must be agreed
   with the user first.
@@ -197,16 +207,16 @@ Pitfalls:
 
 ## Open Items
 
-- Floor trips: first live floor change not yet observed (confirmation dialog? clear counter reset?).
+- Floor trips: no trip has run yet. Every attempt since at least 2026-11-24 08:00 moved 19 -> 11 and back within 7 s (Auto unreadable) and left Auto off; fixed in code, needs a restart and a live trip.
 - Surplus-ore selling: full sequence not yet run in game.
 - Smart Craft buys only bar-cost upgrades; gold-cost upgrades (Pickaxe Radius, Bomb Damage, ...) are not bought.
 - Workshop buying is not yet observed live (bars were 0 after the prestige).
 - `SMART_CRAFT_YIELD` and the Freebies close template: verify after the next restart (`pausing for waiting workflow(s)`, `tap close-menu`).
-- `buy_drone_points` with templates not yet run live; `drone_max_tpl` was cut from the unselected (red) Max button, the selected state is unknown.
+- `buy_drone_points`: tab tap plus the swipe area are not yet confirmed live; `drone_max_tpl` was cut from the unselected (red) Max button, the selected state is unknown.
 - Whether drone upgrades survive prestige: compare before/after the next prestige.
 - `FREEBIES_DIAMONDS_PER_CLAIM` is 28 but this pack gives 5; the pack banks 2 claims and the feature claims one per visit.
 - Skill-Tree (unlocked at Obelisk 4): automation ideas from the wiki discussed, nothing built (user: explore as we go).
 - An Upgrades pin was added to the bottom bar by a stray tap (harmless; remove via Setup Pins).
-- Bomb rotation: pacing is fixed in the workflow; bomb charge counts are not read. Recharge upgrades change the ideal interval.
+- Bomb rotation: one round every 30 s; charge counts are not read, so empty bombs get a no-op tap. Recharge upgrades change the ideal interval.
 - Bar types beyond World 1 floor 20 (VR-Demonite has an ore icon but no bar template yet) need templates as they unlock.
 - The default workflows in `config/config_workflows.py` still contain the original `auto_prestige` (level 127 plus an unconditional floor-Auto tap) and `close_pin_tpl`.

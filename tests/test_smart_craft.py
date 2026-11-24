@@ -445,7 +445,8 @@ class FloorTripTests(SmartCraftBase):
         f._open_floor_panel = Mock(return_value=(None, {n: "red" for n in range(1, 19)} | {19: "green"}))
         f._close_floor_panel = Mock()
         f.change_floor = Mock(return_value=19)
-        f.set_floor_auto = Mock(return_value=True)
+        f.floor_auto_on = Mock(return_value=True)    # read before moving
+        f.set_floor_auto = Mock(return_value=False)  # the floor tap already switched it off
         f._floor_step({"runite": 400})
         f.change_floor.assert_called_once_with(9)
         f.set_floor_auto.assert_called_once_with(False)
@@ -467,11 +468,34 @@ class FloorTripTests(SmartCraftBase):
         f._open_floor_panel = Mock(return_value=(None, {9: "red", 19: "green"}))
         f._close_floor_panel = Mock()
         f.change_floor = Mock(return_value=19)
-        f.set_floor_auto = Mock(side_effect=f._Abort("floor Auto toggle not recognised"))
+        f.floor_auto_on = Mock(return_value=True)
+        f.set_floor_auto = Mock(side_effect=[f._Abort("floor Auto not switched off"), True])
         with self.assertRaises(f._Abort):
             f._floor_step({"runite": 400})
         self.assertEqual([c.args for c in f.change_floor.call_args_list], [(9,), (19,)])
+        self.assertEqual([c.args for c in f.set_floor_auto.call_args_list], [(False,), (True,)])
         self.assertIsNone(f._trip)
+
+    def test_unreadable_auto_never_moves(self):
+        f = self.feature
+        f.floor_auto_on = Mock(side_effect=f._Abort("floor Auto toggle not recognised"))
+        f._open_floor_panel = Mock()
+        f.change_floor = Mock()
+        with self.assertRaises(f._Abort):
+            f._floor_step({"runite": 400})
+        f._open_floor_panel.assert_not_called()
+        f.change_floor.assert_not_called()
+
+    def test_auto_toggle_colours(self):
+        img = np.full((100, 100, 3), 60, np.uint8)
+        img[:50] = (66, 178, 16)       # on: green (BGR)
+        img[50:] = (8, 4, 41)          # off: dark maroon, seen in game 2026-11-24
+        self.assertIs(self.feature._auto_kind(img, 50, 20), True)
+        self.assertIs(self.feature._auto_kind(img, 50, 80), False)
+        img[50:] = (40, 40, 170)       # brighter red counts as off too
+        self.assertIs(self.feature._auto_kind(img, 50, 80), False)
+        img[50:] = (8, 8, 8)           # menu overlay / black: unknown
+        self.assertIsNone(self.feature._auto_kind(img, 50, 80))
 
     def test_disabled_setting_or_no_shortage_never_moves(self):
         f = self.feature

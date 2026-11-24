@@ -239,7 +239,10 @@ lazy imports to avoid circular imports. Level detection writes
   floor with the best weighted ore share (`FLOOR_ORE_SHARES`: floors 1-20,
   first floor of a pair 80/20, second 50/50 per the wiki), confirms the new
   green floor, and switches the floor Auto toggle (below the HUD button, green =
-  on) off. If Auto cannot be switched off, it moves back at once. After
+  on, dark red = off) off. Auto is read before the move, because picking a
+  floor can switch it off by itself. If Auto cannot be read, nothing moves; if
+  it cannot be switched off, it moves back at once and switches Auto on again
+  when it was on. After
   `SMART_CRAFT_FLOOR_TRIP_S` the next cycle crafts and buys first, then returns
   to the origin floor and restores Auto. Switching Smart Craft off also returns.
   The trip is stored in `smart_craft_trip.json` (project root, git-ignored) so

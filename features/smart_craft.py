@@ -1008,13 +1008,34 @@ def change_floor(target):
     return origin
 
 
+def _auto_kind(img, cx, cy, half_w=26, half_h=15):
+    """True (green, on) / False (dark red, off) / None for the floor Auto toggle.
+    Off is a dark maroon (median BGR about (8, 4, 41), seen 2026-11-24), far
+    darker than the red floor buttons, so it gets its own check."""
+    kind = _patch_kind(img, cx, cy, half_w=half_w, half_h=half_h)
+    if kind == "green":
+        return True
+    patch = img[max(0, cy - half_h):cy + half_h, max(0, cx - half_w):cx + half_w].reshape(-1, 3).astype(int)
+    if kind == "red" or (len(patch) and ((patch[:, 2] >= 25) & (patch[:, 2] > patch[:, 1] + 15)
+                                         & (patch[:, 2] > patch[:, 0] + 15)).mean() > 0.5):
+        return False
+    return None
+
+
 def _auto_state(img, gray):
     button = _button(gray, _tpl("floors/floor_button.png"), _FLOOR_BUTTON_ROI)
     if not button["found"]:
         return None, None
     pos = (button["cx"], button["cy"] + _AUTO_OFFSET_Y)
-    kind = _patch_kind(img, *pos, half_w=26, half_h=15)  # whole button; text covers the centre
-    return {"green": True, "red": False}.get(kind), pos
+    return _auto_kind(img, *pos), pos  # whole button; text covers the centre
+
+
+def floor_auto_on():
+    """Current floor Auto state from a fresh main-screen frame, or _Abort."""
+    on, _pos = _auto_state(*_fresh())
+    if on is None:
+        raise _Abort("floor Auto toggle not recognised")
+    return on
 
 
 def set_floor_auto(on):
@@ -1034,6 +1055,10 @@ def set_floor_auto(on):
 
 def _start_trip(missing_ore):
     """Called with the menu closed. Moves to a lower floor if that helps."""
+    # Read Auto before moving: picking a floor in the panel appears to switch
+    # Auto off by itself, so reading it afterwards would always say "off" and
+    # the return trip would never switch it back on.
+    auto_was_on = floor_auto_on()
     _img, floors = _open_floor_panel()
     current = current_floor_from(floors)
     target = best_floor(missing_ore, current)
@@ -1043,9 +1068,14 @@ def _start_trip(missing_ore):
         return None
     change_floor(target)
     try:
-        auto_was_on = set_floor_auto(False)
+        set_floor_auto(False)
     except _Abort:
         change_floor(current)  # never stay down with Auto in an unknown state
+        if auto_was_on:
+            try:
+                set_floor_auto(True)
+            except _Abort as exc:
+                _log(f"[SMART_CRAFT] could not switch floor Auto back on: {exc}")
         raise
     _set_trip({"origin": current, "floor": target, "auto_was_on": auto_was_on,
                "until": time.time() + float(getattr(s, "SMART_CRAFT_FLOOR_TRIP_S", 600.0))})
