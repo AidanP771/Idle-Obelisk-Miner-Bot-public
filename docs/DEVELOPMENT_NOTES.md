@@ -107,6 +107,8 @@ Measured at 900 x 1600, English UI. Coordinates are full-resolution pixels.
 - Prestige page: "Earn Prestige Points (PP) at level 20+"; shows the PP gain.
   The HUD top-left shows `PP(+gain)`.
 - First automatic prestige ran 2026-11-23 17:54: 29 -> 230 PP, level 45 -> 1, cap 45 -> 50.
+- The Prestige page keeps its scroll position. The Prestige box is at the top, above Artifacts and the PP upgrades; a scrolled-down page hides it (seen 2026-11-23 21:45, after Obelisk 4 added rows).
+- Wiki (Prestige page): Drone Points are permanent (kept on prestige), as are Relics, Artifacts, Veins, bomb charges, challenge progress and items. The wiki does not say whether drone upgrades bought with Drone Points are kept; unverified.
 - Drones page "Exchange Gold for Drone Points": quantity buttons 1x/5x/25x/250x/Max at y 250 (Max x 716), exchange button at (450, 352).
 
 ### Bombs
@@ -126,7 +128,7 @@ replaces the default workflows. The reference setup uses:
 | `obelisk_fight` | on, 300 s | If `obelisk/main_ready_tpl` is visible -> call `obelisk_fight_attack`. |
 | `obelisk_fight_attack` | helper | Tap the obelisk HUD button at (843,440) (fixed position: its icon changes with every obelisk level, so `obelisk_button_tpl` stopped matching after Obelisk 4), Fight tab; Claim Victory visible (`obelisk/claim_victory_tpl`, 0.9) -> claim; damage warning or no ready Attack -> close; else Attack, hold (450,800) 5 x 8 s, optional Exit and Return To Mines. |
 | `auto_prestige` | on, 600 s | If `hud/level_capped_tpl` (0.9) is visible -> call `prestige`. |
-| `prestige` | helper | Open Prestige page; only if the Prestige button is visible -> close menu, call `prestige_execute`; else close menu. Drone points are therefore bought only right before a prestige. |
+| `prestige` | helper | Open Prestige page, swipe down twice (scroll to top); only if the Prestige button is visible -> close menu, call `prestige_execute`; else close menu. Drone points are therefore bought only right before a prestige. |
 | `prestige_execute` | helper | Sell All (two taps), call `buy_drone_points`, open Prestige page, press Prestige (2 clicks), close. |
 | `buy_drone_points` | helper | Drones -> Upgrades tab, Max (716,250), exchange (450,352). |
 | `level_up_early_game` | off | Aborts at the locked Contracts tile and leaves the menu open; competes with Smart Craft. |
