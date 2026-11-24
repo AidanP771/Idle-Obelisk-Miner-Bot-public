@@ -331,6 +331,7 @@ def _button(gray, template, roi):
 
 
 def _tap(x, y, what):
+    bot_log(f"[SMART_CRAFT] tap {what} at ({int(x)},{int(y)})", "TXT")  # file only: reconstructable taps
     if not tap(int(x), int(y), jitter=int(getattr(s, "SMART_CRAFT_TAP_JITTER_PX", 3))):
         raise _Abort(f"tap failed: {what}")
 
@@ -365,8 +366,12 @@ def _upgrades_ready(_img, gray):
     return _button(gray, _tpl("buy_all.png"), _BUY_ALL_ROI)["found"]
 
 
-def _craft_ready(img, _gray):
-    return bool(_craft_icons(img))
+def _craft_ready(img, gray):
+    """Craft page: a 1x/5x quantity button and bar icons, and not the Workshop
+    (whose third cost column also has bar icons in the Craft icon column)."""
+    qty = (_button(gray, _tpl("qty_5x.png"), _QTY_ROI)["found"]
+           or _button(gray, _tpl("qty_1x.png"), _QTY_ROI)["found"])
+    return bool(qty and _craft_icons(img) and not _workshop_ready(img, gray))
 
 
 def _close_menu():
@@ -1447,7 +1452,7 @@ def _unlock_rows(names, generation):
 # ============================================================
 
 def run_cycle(generation=None) -> str:
-    """Caller owns the action lock. Returns ok | nothing_needed | error | cancelled."""
+    """Caller owns the action lock. Returns ok | sold_only | nothing_needed | error | cancelled."""
     generation = _run_generation if generation is None else generation
     crafted = bought = 0
     first_summary = None
@@ -1502,7 +1507,7 @@ def run_cycle(generation=None) -> str:
             else:
                 _yield_point(generation)
                 sold = sell_surplus_ore({r[0] for r in rows}, generation)
-        status = "ok" if crafted or bought or sold else "nothing_needed"
+        status = "ok" if crafted or bought else ("sold_only" if sold else "nothing_needed")
         state.smart_craft_last_status = (f"{status}: crafted {crafted} bar(s), bought {bought} "
                                          f"upgrade(s); missing at start: {first_summary}")
         if sold:

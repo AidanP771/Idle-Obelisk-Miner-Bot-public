@@ -191,7 +191,9 @@ def capture_screen(local_path: str, slot: str = "manual_scr", color: bool = Fals
             staging = f"{path}.{capture_id}.part"
             method = _capture_method()
             context = (f"slot={slot} request={request_id} capture={capture_id} "
-                       f"device={device} attempt={attempt}/{attempts} method={method}")
+                       f"device={device} attempt={attempt}/{attempts} method={method} "
+                       f"thread={threading.current_thread().name}"
+                       + (f" remote={remote}" if method == "pull" else ""))
             phase = "prepare"
             img = None
 
@@ -201,16 +203,14 @@ def capture_screen(local_path: str, slot: str = "manual_scr", color: bool = Fals
             try:
                 os.makedirs(os.path.dirname(path), exist_ok=True)
                 phase = "capture"
+                # One log line per successful capture (phase=complete); failures
+                # log their phase. A separate "begin" line doubled the log volume.
                 if method == "exec_out":
-                    _log(f"{context} phase=capture begin "
-                         f"thread={threading.current_thread().name}")
                     data = adb("exec-out", "screencap", "-p", device=device, log_fn=adb_log, binary=True)
                     phase = "stage"
                     with open(staging, "wb") as stream:
                         stream.write(data)
                 else:
-                    _log(f"{context} phase=capture begin remote={remote} "
-                         f"thread={threading.current_thread().name}")
                     adb("shell", "screencap", "-p", remote, device=device, log_fn=adb_log)
                     phase = "pull"
                     adb("pull", remote, staging, device=device, log_fn=adb_log)

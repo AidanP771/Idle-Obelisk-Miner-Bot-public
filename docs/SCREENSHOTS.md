@@ -103,22 +103,23 @@ duration limit.
 
 ## Reading Logs
 
-All capture messages begin with `[SCREENSHOT]`. Normal captures report their
-start and successful completion. Errors, retries, reconnections, cleanup
+All capture messages begin with `[SCREENSHOT]`. A normal capture writes one
+line (`phase=complete`, since 2026-11-24; before, a separate `capture begin`
+line doubled the volume). Every line names the method and thread; `pull`
+lines also name the Android file. Errors, retries, reconnections, cleanup
 problems and exhausted attempts are also logged. Cache-hit logging is disabled
 by default to avoid filling the log on every watchdog call.
 
 Example with shortened IDs:
 
 ```text
-[SCREENSHOT] slot=game_scr request=abc capture=def device=127.0.0.1:16416 attempt=1/2 phase=capture begin remote=/sdcard/__obelisk_game_scr_def.png thread=bot-main
 [SCREENSHOT] slot=game_scr request=abc capture=def device=127.0.0.1:16416 attempt=1/2 phase=pull failed: RuntimeError: ... elapsed=0.300s
 [SCREENSHOT] slot=game_scr request=abc capture=def device=127.0.0.1:16416 attempt=1/2 retry_in=0.200s (new full screenshot)
 [SCREENSHOT] slot=game_scr request=abc capture=ghi device=127.0.0.1:16416 attempt=2/2 phase=complete size=900x1600 bytes=120000 elapsed=0.700s recovered=True
 ```
 
 - `request`: links all attempts belonging to the same request.
-- `capture`: identifies an individual attempt (and with `pull` its Android file path).
+- `capture`: identifies an individual attempt; `remote` (only `pull`) is its Android file path.
 - `method`: `exec_out` or `pull` for this attempt.
 - `phase`: `prepare`, `capture`, `stage` (exec_out), `pull`, `decode`, `device_check`, `publish`,
   `remote_cleanup`, `local_cleanup`, `cache_read`, `cache_stat`, `viewer_read`

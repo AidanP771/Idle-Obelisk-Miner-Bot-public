@@ -38,6 +38,15 @@ combined failure afterward.
 Actual reward verification requires a reliable, agreed visual indicator in the
 game. No additional image search or balance measurement has been introduced.
 
+## JSON Saves on Windows
+
+`config/json_store.atomic_write_json` replaces the target with `os.replace`.
+Windows refuses that (`PermissionError`, WinError 5) while another process
+briefly holds the file open (virus scanner, indexer). The replace is retried
+up to six times with short waits before the error is raised; the original
+file stays intact and the staging file is removed either way. This was the
+cause of the intermittent `test_gem_statistics`/`test_secret_key` failures.
+
 ## Global Pause
 
 **Pause after current** sets `state.automation_paused`. Each feature checks it

@@ -184,7 +184,10 @@ lazy imports to avoid circular imports. Level detection writes
   upgrades bought; last cycle result as tooltip) and countdown. Settings live
   in the `smart_craft` section (`SMART_CRAFT_*`); `SMART_CRAFT_ENABLED` belongs
   to **Startup Defaults**. Page navigation polls fresh frames every 0.25 s
-  until the page is recognised (up to 3 x `SMART_CRAFT_UI_DELAY_S`). One cycle holds `state.ingame_action_lock`
+  until the page is recognised (up to 3 x `SMART_CRAFT_UI_DELAY_S`; the Craft
+  page needs a 1x/5x button and no Workshop header). Every Smart Craft tap is
+  logged to the file (TXT). A cycle that only sold ore returns `sold_only`.
+  One cycle holds `state.ingame_action_lock`
   throughout: open main menu -> Upgrades, scroll from the top through the
   list and read every row that has a Buy button and a bar cost (bar icon +
   `have/need`), stopping at the locked "Unlock At Level" section (no further

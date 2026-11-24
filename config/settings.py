@@ -69,7 +69,7 @@ SUPPRESS_EXCEPTIONS = True
 MAIN_LOOP_TICK = 1.5  
 
 # ========= Logging =========
-LOG_MAX_SIZE_MB = 2
+LOG_MAX_SIZE_MB = 5                    # x (1 + LOG_BACKUP_COUNT) files; 2 MB held only ~1.5 h
 LOG_BACKUP_COUNT = 3
 
 # ========= Tap =========

@@ -12,6 +12,21 @@ Local, unversioned changes (`config/user_workflows.json`,
 
 ## 2026-11-24
 
+### Audit phase 2: reliability and logs (this entry's commit)
+- `_craft_ready` needs a 1x/5x quantity button and no Workshop header; it
+  accepted Workshop frames before (the Workshop's third cost column has bar
+  icons in the Craft icon column), a risk with the new page polling. Saved
+  frames: only the 4 Workshop frames change, all 15 Craft frames still pass.
+- A Smart Craft cycle that only sold ore reports `sold_only` instead of `ok`.
+- Every Smart Craft tap is logged to the file (TXT).
+- JSON saves retry `os.replace` on Windows `PermissionError` (cause of the
+  intermittent gem-statistics/secret-key test errors; a real risk for settings,
+  workflows, statistics and the trip file).
+- Screenshot log: one line per successful capture instead of two; log
+  rotation 2 -> 5 MB, so the four files hold several times more history.
+- Verified: 313 Python and 27 JS tests. Needs a restart.
+
+
 ### Audit phase 1: obelisk back-off, skip missing Craft rows, stop at locked rows (`3e8590b`)
 - Audit (after the 11:19 restart): the obelisk was opened every minute only to
   find the damage warning; Smart Craft spent 9-14 s per round searching the

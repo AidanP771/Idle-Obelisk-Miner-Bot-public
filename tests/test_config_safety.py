@@ -124,6 +124,29 @@ class WorkflowValidationTests(unittest.TestCase):
 
 
 class AtomicStorageTests(unittest.TestCase):
+    def test_briefly_locked_target_is_retried_and_persistent_lock_raises(self):
+        with tempfile.TemporaryDirectory(dir=ROOT) as folder:
+            path = Path(folder) / "config.json"
+            real_replace = json_store.os.replace
+            calls = []
+
+            def flaky(src, dst):
+                calls.append(1)
+                if len(calls) < 3:
+                    raise PermissionError(5, "Access is denied")
+                return real_replace(src, dst)
+            with patch.object(json_store.os, "replace", side_effect=flaky), patch.object(json_store.time, "sleep"):
+                json_store.atomic_write_json(path, {"saved": True})
+            self.assertEqual(json.loads(path.read_text(encoding="utf-8")), {"saved": True})
+            self.assertEqual(len(calls), 3)
+            with patch.object(json_store.os, "replace", side_effect=PermissionError(5, "Access is denied")) as rep_mock, \
+                    patch.object(json_store.time, "sleep"):
+                with self.assertRaises(PermissionError):
+                    json_store.atomic_write_json(path, {"saved": False})
+            self.assertEqual(rep_mock.call_count, json_store._REPLACE_ATTEMPTS)
+            self.assertEqual(json.loads(path.read_text(encoding="utf-8")), {"saved": True})
+            self.assertEqual(list(Path(folder).glob("*.tmp")), [])
+
     def test_replace_or_fsync_failure_preserves_original_and_cleans_staging(self):
         with tempfile.TemporaryDirectory(dir=ROOT) as folder:
             path = Path(folder) / "config.json"

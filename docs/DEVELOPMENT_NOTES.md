@@ -199,7 +199,7 @@ Pitfalls:
 
 - Unit tests: `.venv/Scripts/python.exe -B -m unittest discover -s tests -v`
   and the `node --test` command from `AGENTS.md`. One intermittent error was
-  seen in unrelated tests (2026-11-24: `test_gem_statistics` and `test_secret_key`; cause: `os.replace` in `config/json_store.py` raises `PermissionError` [WinError 5] when the target is briefly open, a real risk for every JSON save) and did not reproduce on rerun.
+  seen in unrelated tests (2026-11-24: `test_gem_statistics` and `test_secret_key`; cause: `os.replace` raised `PermissionError` [WinError 5] while the target was briefly open; now retried, see RELIABILITY.md) and did not reproduce on rerun.
 - Offline checks: save frames from a read-only pass (open page, scroll, close)
   and run the feature's readers on them (`read_upgrade_rows`, `read_craft_row`,
   `read_floor_panel`, `read_sell_rows`). This caught the missing Demonite icon.
@@ -209,7 +209,7 @@ Pitfalls:
   workflow run (`wf_run:<slug>`) or ask the user to pause the bot.
 - Workflow dry run: load the edited definitions and run `_run_workflow` from `features/workflows.py` with the test fixture of `tests/test_screenshot_consumers.py` and a `find_template` mock that decides per template name; this checks branches and aborts without ADB.
 - Watching a run: poll `/api/screenshot` (read-only) once a second after the run's `starting` log line.
-- Logs: `bot.log` in the project root, rotated to `bot.log.1..3` at 2 MB.
+- Logs: `bot.log` in the project root, rotated to `bot.log.1..3` at 5 MB (2 MB until 2026-11-24 held only about 1.5 h, 63% of it screenshot lines).
   Prefer read-only navigation; anything that spends resources must be agreed
   with the user first.
 - Template building: crop from a 900 x 1600 screenshot, then score the

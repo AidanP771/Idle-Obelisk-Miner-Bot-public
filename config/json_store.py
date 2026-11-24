@@ -4,6 +4,9 @@ import os
 from pathlib import Path
 import tempfile
 import threading
+import time
+
+_REPLACE_ATTEMPTS = 6   # Windows refuses os.replace while another process briefly holds the target
 
 _write_lock = threading.Lock()
 
@@ -26,7 +29,21 @@ def atomic_write_json(path: Path, data):
                 staging.write(payload)
                 staging.flush()
                 os.fsync(staging.fileno())
-            os.replace(temporary_path, path)
+            _replace_with_retry(temporary_path, path)
         finally:
             if temporary_path is not None:
                 temporary_path.unlink(missing_ok=True)
+
+
+def _replace_with_retry(source: Path, target: Path):
+    """os.replace, retried briefly on PermissionError (WinError 5: the target is
+    open in another process, e.g. a virus scanner or indexer). The last error
+    is raised; the caller's staging cleanup still runs."""
+    for attempt in range(_REPLACE_ATTEMPTS):
+        try:
+            os.replace(source, target)
+            return
+        except PermissionError:
+            if attempt == _REPLACE_ATTEMPTS - 1:
+                raise
+            time.sleep(0.02 * (attempt + 1))

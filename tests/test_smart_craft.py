@@ -320,6 +320,19 @@ class BuyTests(SmartCraftBase):
         self.assertEqual(self.state.smart_craft_upgrades_bought, 0)
 
 
+class CraftPageTests(SmartCraftBase):
+    def test_craft_page_needs_quantity_buttons_and_is_not_the_workshop(self):
+        f = self.feature
+        f._craft_icons = Mock(return_value=[("citrine", 513, 300, 0.97)])
+        found = {"qty_5x.png": True, "workshop_header.png": False}
+        f._button = Mock(side_effect=lambda gray, tpl, roi: {"found": found.get(tpl.split("/")[-1], False)})
+        self.assertTrue(f._craft_ready(None, None))
+        found["workshop_header.png"] = True                         # Workshop third cost column
+        self.assertFalse(f._craft_ready(None, None))
+        found.update({"workshop_header.png": False, "qty_5x.png": False})
+        self.assertFalse(f._craft_ready(None, None))                # no quantity buttons
+
+
 class RoundTests(SmartCraftBase):
     def setUp(self):
         super().setUp()
@@ -351,6 +364,16 @@ class RoundTests(SmartCraftBase):
         f.run_cycle()
         f.scan_workshop.assert_not_called()
         f.buy_workshop.assert_not_called()
+
+    def test_a_cycle_that_only_sold_ore_is_not_reported_as_ok(self):
+        f = self.feature
+        self.settings.SMART_CRAFT_SELL_SURPLUS_ORE = True
+        f._floor_step = Mock()
+        f.scan_upgrades = Mock(return_value=[("adamant", 10, 10, 400)])   # nothing missing
+        f.buy_upgrades = Mock(return_value=0)
+        f.sell_surplus_ore = Mock(return_value=["tin"])
+        self.assertEqual(f.run_cycle(), "sold_only")
+        self.assertTrue(self.state.smart_craft_last_status.startswith("sold_only:"))
 
     def test_rounds_repeat_while_purchases_happen(self):
         f = self.feature
