@@ -12,7 +12,7 @@ Local, unversioned changes (`config/user_workflows.json`,
 
 ## 2026-11-24
 
-### Docs and working rules (this entry's commit)
+### Docs and working rules (`583831e`)
 - AGENTS.md: lock-taking features must check the global pause; detect
   without the lock; workflow edits are validated and dry-run before reload;
   live checks only by log and screenshots; all JS tests via
