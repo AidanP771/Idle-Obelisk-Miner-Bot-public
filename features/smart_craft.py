@@ -86,6 +86,12 @@ _thread_started = False
 _stop_evt = threading.Event()
 _wake_evt = threading.Event()
 _run_generation = 0
+_lock_owned = False   # the cycle holds state.ingame_action_lock (taken by _try_run_with_lock)
+_paused = False       # the lock is released while waiting workflows run
+
+_WAITING_MAX_AGE_S = 30.0   # waiting entries are refreshed every WORKFLOWS_BUSY_RETRY_S
+_YIELD_MAX_WAIT_S = 300.0   # stop waiting for workflows after this long
+_RELOCK_MAX_WAIT_S = 600.0  # give up the cycle if the lock cannot be taken back
 
 _bars = {}     # name -> (bgr template, mean foreground colour)
 _glyphs = []   # [(char, zone feature vector)] - several variants per char
@@ -359,6 +365,59 @@ def _close_menu():
             _delay()
     except _Abort as exc:
         _log(f"[SMART_CRAFT] closing menu failed: {exc}")
+
+
+def _waiting_workflows():
+    now = time.time()
+    waiting = dict(getattr(state, "workflows_waiting", {}) or {})
+    return sorted(slug for slug, ts in waiting.items() if now - ts <= _WAITING_MAX_AGE_S)
+
+
+def _wake_workflows():
+    try:
+        from features import workflows
+        workflows.retry_waiting_now()
+    except Exception as exc:  # they still retry on their own busy interval
+        _log(f"[SMART_CRAFT] could not wake waiting workflows: {exc}")
+
+
+def _yield_point(generation) -> bool:
+    """Pause for auto workflows that wait for the action lock (obelisk fight,
+    bombs, ...): close the menu, release the lock until they have run, then
+    take it back. The cycle keeps its scan results and continues where it
+    stopped. Returns True after a pause; the caller reopens its page."""
+    global _lock_owned, _paused
+    if not _lock_owned or not getattr(s, "SMART_CRAFT_YIELD", True):
+        return False
+    waiting = _waiting_workflows()
+    if not waiting:
+        return False
+    _check_cancel(generation)
+    _close_menu()
+    _img, gray = _fresh()
+    if _button(gray, _tpl("close_menu.png"), _CLOSE_ROI)["found"]:
+        _log("[SMART_CRAFT] cannot pause: the menu is still open")
+        return False
+    started = time.time()
+    _log(f"[SMART_CRAFT] pausing for waiting workflow(s): {', '.join(waiting)}")
+    _paused = True
+    _lock_owned = False
+    state.ingame_action_lock.release()
+    _wake_workflows()
+    while True:
+        time.sleep(0.5)
+        _check_cancel(generation)
+        elapsed = time.time() - started
+        if _waiting_workflows() and elapsed < _YIELD_MAX_WAIT_S:
+            continue
+        if state.ingame_action_lock.acquire(blocking=False):
+            break
+        if elapsed >= _RELOCK_MAX_WAIT_S:
+            raise _Abort("action lock not available after pausing")
+    _lock_owned = True
+    _paused = False
+    _log(f"[SMART_CRAFT] resuming after {time.time() - started:.0f}s")
+    return True
 
 
 # ============================================================
@@ -1174,11 +1233,14 @@ def run_cycle(generation=None) -> str:
     try:
         # Each round: read needs -> craft -> buy. Buying raises the next level's
         # cost, so further rounds continue while purchases still happen.
+        # _yield_point() pauses for waiting workflows; every page is reopened afterwards.
         for round_no in range(1, int(getattr(s, "SMART_CRAFT_MAX_ROUNDS", 3)) + 1):
+            _yield_point(generation)
             img, gray = _open_page("upgrades_tpl", _upgrades_ready, "Upgrades", generation)
             rows = scan_upgrades(img, gray, generation)
             workshop = getattr(s, "SMART_CRAFT_WORKSHOP", True)
             if workshop:
+                _yield_point(generation)
                 img, gray = _open_page("workshop_tpl", _workshop_ready, "Workshop", generation,
                                        section="permanent")
                 ws_rows = scan_workshop(img, gray, generation)
@@ -1190,16 +1252,20 @@ def run_cycle(generation=None) -> str:
             _ore_missing.clear()
             _log(f"[SMART_CRAFT] round {round_no}: {len(rows)} bar-cost upgrade(s); missing: {summary}")
             if shortfalls:
-                _open_page("craft_tpl", _craft_ready, "Craft", generation)
                 quantity = None
-                if getattr(s, "SMART_CRAFT_USE_5X", True) and select_quantity_5x():
-                    quantity = "5x"
-                for bar, (have, target) in shortfalls.items():
+                for index, (bar, (have, target)) in enumerate(shortfalls.items()):
+                    if _yield_point(generation) or index == 0:
+                        _open_page("craft_tpl", _craft_ready, "Craft", generation)
+                        quantity = None
+                        if getattr(s, "SMART_CRAFT_USE_5X", True) and select_quantity_5x():
+                            quantity = "5x"
                     crafted += craft_bar(bar, have, target, generation, quantity)
             bought_now = 0
             if getattr(s, "SMART_CRAFT_BUY_UPGRADES", True):
+                _yield_point(generation)
                 bought_now = buy_upgrades(generation)       # Upgrades first (user policy)
                 if workshop:
+                    _yield_point(generation)
                     bought_now += buy_workshop(generation)
             bought += bought_now
             if not bought_now:
@@ -1210,6 +1276,7 @@ def run_cycle(generation=None) -> str:
                 # A purchase after the last scan can add a cost in a new bar type.
                 _log("[SMART_CRAFT] selling skipped: upgrade list changed after the last scan")
             else:
+                _yield_point(generation)
                 sold = sell_surplus_ore({r[0] for r in rows}, generation)
         status = "ok" if crafted or bought or sold else "nothing_needed"
         state.smart_craft_last_status = (f"{status}: crafted {crafted} bar(s), bought {bought} "
@@ -1227,7 +1294,8 @@ def run_cycle(generation=None) -> str:
         _log(f"[SMART_CRAFT] cycle stopped: {exc}")
         return "cancelled" if str(exc) == "cancelled" else "error"
     finally:
-        _close_menu()
+        if not _paused:  # never tap without the lock (cancelled during a pause)
+            _close_menu()
 
 
 def _try_run_with_lock() -> str:
@@ -1238,14 +1306,18 @@ def _try_run_with_lock() -> str:
         _log("[SMART_CRAFT] game not running -> skipping tick")
         return "no_game"
     lock = state.ingame_action_lock
+    global _lock_owned, _paused
     if not lock.acquire(blocking=False):
         _log("[SMART_CRAFT] another feature is busy -> postponing")
         return "busy"
+    _lock_owned, _paused = True, False
     try:
         state.smart_craft_last_run_ts = time.time()
         return run_cycle()
     finally:
-        lock.release()
+        if _lock_owned:  # a pause may have ended without taking the lock back
+            lock.release()
+        _lock_owned = _paused = False
 
 
 def _return_with_lock() -> bool:

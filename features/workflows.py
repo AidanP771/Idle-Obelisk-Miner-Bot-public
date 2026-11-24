@@ -968,6 +968,10 @@ def _scheduler_tick():
             if result == "ok":
                 rt["run_count"] = rt.get("run_count", 0) + 1
             if result == "busy":
+                state.workflows_waiting[slug] = time.time()
+            else:
+                state.workflows_waiting.pop(slug, None)
+            if result == "busy":
                 rt["next_due_ts"] = time.time() + float(getattr(s, "WORKFLOWS_BUSY_RETRY_S", 10.0))
             elif result == "no_game":
                 rt["next_due_ts"] = time.time() + 30.0
@@ -1036,6 +1040,18 @@ def toggle_master() -> bool:
     return new
 
 
+def retry_waiting_now():
+    """Make the auto workflows that wait for the action lock due at once.
+    Called by a long lock holder (Smart Craft) right after it paused for them."""
+    now = time.time()
+    with state.workflows_lock:
+        for slug in list(state.workflows_waiting):
+            rt = state.workflows.get(slug)
+            if rt and rt.get("enabled"):
+                rt["next_due_ts"] = min(rt.get("next_due_ts", now) or now, now)
+    _wake_evt.set()
+
+
 @_with_state_lock
 def toggle_wf(slug: str) -> bool:
     """Per-WF auto toggle."""
@@ -1050,6 +1066,7 @@ def toggle_wf(slug: str) -> bool:
         _wake_evt.set()
     else:
         rt["next_due_ts"] = 0.0
+        state.workflows_waiting.pop(slug, None)
     _log(f"[WORKFLOWS] {slug} auto -> {'ON' if rt['enabled'] else 'OFF'}")
     return rt["enabled"]
 

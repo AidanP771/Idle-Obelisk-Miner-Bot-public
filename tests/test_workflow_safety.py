@@ -16,7 +16,7 @@ class WorkflowSafetyTests(unittest.TestCase):
         self.w = self.workflow
         self.w.state = types.SimpleNamespace(workflows_lock=threading.RLock(), workflows={},
             workflows_running=None, workflows_master_enabled=True, ingame_action_lock=threading.Lock(),
-            workflows_reload_status="idle", workflows_reload_error="")
+            workflows_reload_status="idle", workflows_reload_error="", workflows_waiting={})
         self.w.cfg_wf = types.SimpleNamespace(WORKFLOWS={}, load_workflow_definitions=Mock())
         self.w.is_game_running.return_value = True
         self.w.tap.return_value = True
@@ -85,6 +85,23 @@ class WorkflowSafetyTests(unittest.TestCase):
                 self.assertEqual(rt["last_status"], "error")
                 self.assertEqual(rt.get("run_count", 0), 0)
                 self.assertFalse(self.w.state.ingame_action_lock.locked())
+
+    def test_busy_auto_run_is_recorded_as_waiting_until_it_runs(self):
+        self.w.cfg_wf.WORKFLOWS = {"wf": {"steps": [{"type": "tap_xy", "x": 1, "y": 2}],
+                                          "enabled_default": True, "interval_s": 300}}
+        self.w._ensure_runtime_entry("wf", self.w.cfg_wf.WORKFLOWS["wf"])
+        rt = self.w.state.workflows["wf"]
+        rt["next_due_ts"] = time.time() - 1
+        with self.w.state.ingame_action_lock:
+            self.w._scheduler_tick()
+        self.assertEqual(rt["last_status"], "busy")
+        self.assertIn("wf", self.w.state.workflows_waiting)
+        self.assertGreater(rt["next_due_ts"], time.time())
+        self.w.retry_waiting_now()                    # a long lock holder paused for it
+        self.assertLessEqual(rt["next_due_ts"], time.time())
+        self.w._scheduler_tick()
+        self.assertEqual(rt["last_status"], "ok")
+        self.assertNotIn("wf", self.w.state.workflows_waiting)
 
     def test_master_off_during_last_step_is_cancelled_and_does_not_count(self):
         def turn_off(*args, **kwargs):

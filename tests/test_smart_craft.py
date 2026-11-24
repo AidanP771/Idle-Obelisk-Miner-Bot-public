@@ -569,6 +569,87 @@ class SellSurplusTests(SmartCraftBase):
         f.tap.assert_not_called()
 
 
+class YieldTests(SmartCraftBase):
+    """Smart Craft pauses for waiting auto workflows and resumes with its scan."""
+
+    def setUp(self):
+        super().setUp()
+        self.settings.SMART_CRAFT_MAX_ROUNDS = 1
+        self.settings.SMART_CRAFT_WORKSHOP = False
+        self.state.workflows_waiting = {}
+        f = self.feature
+        self.events = []
+        f._open_page = Mock(side_effect=lambda tile, *a, **k: self.events.append(f"open {tile}") or (None, None))
+        f._close_menu = Mock(side_effect=lambda: self.events.append("close"))
+        f._fresh = Mock(return_value=(None, None))
+        f._button = Mock(return_value={"found": False})   # menu closed
+        f.select_quantity_5x = Mock(return_value=True)
+        f.scan_upgrades = Mock(return_value=[("adamant", 0, 10, 400), ("runite", 0, 10, 500)])
+        f.craft_bar = Mock(side_effect=self.craft)
+        f.buy_upgrades = Mock(return_value=0)
+        f._floor_step = Mock()
+        f._wake_workflows = Mock(side_effect=self.workflow_runs)
+        self.crafting_waits_for = None
+
+    def craft(self, bar, *_args):
+        self.events.append(f"craft {bar}")
+        if bar == "adamant" and self.crafting_waits_for:
+            self.state.workflows_waiting[self.crafting_waits_for] = 100.0
+        return 5
+
+    def workflow_runs(self):
+        lock = self.state.ingame_action_lock
+        self.assertTrue(lock.acquire(blocking=False), "lock must be free during the pause")
+        lock.release()
+        self.events.append("workflow")
+        self.state.workflows_waiting.clear()
+
+    def test_no_waiting_workflow_means_no_pause(self):
+        self.assertEqual(self.feature._try_run_with_lock(), "ok")
+        self.feature._wake_workflows.assert_not_called()
+        self.assertEqual(self.events.count("open craft_tpl"), 1)
+        self.assertFalse(self.state.ingame_action_lock.locked())
+
+    def test_pause_between_bars_reopens_craft_and_keeps_the_scan(self):
+        self.crafting_waits_for = "obelisk_fight"
+        self.assertEqual(self.feature._try_run_with_lock(), "ok")
+        self.assertEqual(self.events[:7], ["open upgrades_tpl", "open craft_tpl", "craft adamant",
+                                           "close", "workflow", "open craft_tpl", "craft runite"])
+        self.feature.scan_upgrades.assert_called_once()
+        self.assertEqual(self.feature.select_quantity_5x.call_count, 2)
+        self.assertFalse(self.state.ingame_action_lock.locked())
+
+    def test_stale_waiting_entries_and_disabled_setting_are_ignored(self):
+        self.state.workflows_waiting["old"] = 100.0 - 60
+        self.feature._try_run_with_lock()
+        self.feature._wake_workflows.assert_not_called()
+        self.settings.SMART_CRAFT_YIELD = False
+        self.crafting_waits_for = "bombs"
+        self.feature._try_run_with_lock()
+        self.feature._wake_workflows.assert_not_called()
+
+    def test_menu_that_stays_open_blocks_the_pause(self):
+        self.crafting_waits_for = "bombs"
+        self.feature._button = Mock(return_value={"found": True})
+        self.assertEqual(self.feature._try_run_with_lock(), "ok")
+        self.feature._wake_workflows.assert_not_called()
+        self.assertFalse(self.state.ingame_action_lock.locked())
+
+    def test_cancel_during_the_pause_neither_taps_nor_double_releases(self):
+        self.crafting_waits_for = "bombs"
+        f = self.feature
+
+        def cancel_while_waiting():
+            self.events.append("workflow")
+            f._stop_evt.set()
+        f._wake_workflows = Mock(side_effect=cancel_while_waiting)
+        self.addCleanup(f._stop_evt.clear)
+        self.assertEqual(f._try_run_with_lock(), "cancelled")
+        self.assertEqual(self.events[-2:], ["close", "workflow"])   # no close tap after the pause
+        self.assertFalse(self.state.ingame_action_lock.locked())
+        self.assertFalse(f._lock_owned or f._paused)
+
+
 class SettingsTests(unittest.TestCase):
     def test_overrides_apply_and_invalid_values_are_rejected(self):
         data = {"startup_defaults": {"SMART_CRAFT_ENABLED": True},

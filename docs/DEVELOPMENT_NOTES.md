@@ -95,6 +95,8 @@ Measured at 900 x 1600, English UI. Coordinates are full-resolution pixels.
 - Main-screen timer at about (840, 490) shows yellow `0:00` when ready.
 - The fight needs a **hold** on the obelisk at (450, 800); a fight lasts about 34 s. ADB commands time out at 30 s, so the workflow holds 5 x 8 s.
 - After the fight: Exit, then "Return To Mines".
+- The red "Warning: Pickaxe Damage is lower than Obelisk Armor" box (`damage_warning_tpl`) means a fight deals 0 damage; the workflow closes without fighting, so the 20 min cooldown is not spent.
+- Timing, 2026-11-23: checks ran only every 8-14 min although the interval was 250-300 s, because Smart Craft held the action lock for 5-8 min per cycle (log: `postponed - another feature busy`). Fixed by `SMART_CRAFT_YIELD`.
 - When the obelisk's HP reaches 0, the Fight tab shows an orange **Claim
   Victory** button (about (450, 1230)) instead of Attack, and the main-screen
   timer keeps showing `0:00`. Claiming returns to the mine with "Obelisk Level
@@ -125,9 +127,9 @@ replaces the default workflows. The reference setup uses:
 
 | Slug | Auto | Purpose |
 | --- | --- | --- |
-| `bomb_rotation_early_game` | on, 150 s | Optional panel open; 5 rounds of Exp, Plenty (mark), Basic (break), Chain - one tap each, 3 s between rounds so each round hits fresh rocks; each bomb in an `if template_visible` (0.9) so locked bombs are skipped; optional panel close. 5 rounds = observed charge cap; verified 2026-11-23: after a run Exp/Plenty/Chain 0, Basic 1 (recharged during the run). Raise the round count if Bomb Capacity grows. |
+| `bomb_rotation_early_game` | on, 90 s | Optional panel open; 5 rounds of Exp, Plenty (mark), Basic (break), Chain - one tap each, 3 s between rounds so each round hits fresh rocks; each bomb in an `if template_visible` (0.9) so locked bombs are skipped; optional panel close. 5 rounds = observed charge cap; verified 2026-11-23: after a run Exp/Plenty/Chain 0, Basic 1 (recharged during the run). Raise the round count if Bomb Capacity grows. |
 | `bomb_basic_rotation_all` | off, inactive | Original default rotation (2 s holds); `enabled_default` false so it stays off after restarts. |
-| `obelisk_fight` | on, 300 s | If `obelisk/main_ready_tpl` is visible -> call `obelisk_fight_attack`. |
+| `obelisk_fight` | on, 60 s (only a screenshot when not ready) | If `obelisk/main_ready_tpl` is visible -> call `obelisk_fight_attack`. |
 | `obelisk_fight_attack` | helper | Tap the obelisk HUD button at (843,440) (fixed position: its icon changes with every obelisk level, so `obelisk_button_tpl` stopped matching after Obelisk 4), Fight tab; Claim Victory visible (`obelisk/claim_victory_tpl`, 0.9) -> claim; damage warning or no ready Attack -> close; else Attack, hold (450,800) 5 x 8 s, optional Exit and Return To Mines. |
 | `auto_prestige` | on, 600 s | If `hud/level_capped_tpl` (0.9) is visible -> call `prestige`. |
 | `prestige` | helper | Open Prestige page, swipe down twice (scroll to top); only if the Prestige button is visible -> close menu, call `prestige_execute`; else close menu. Drone points are therefore bought only right before a prestige. |

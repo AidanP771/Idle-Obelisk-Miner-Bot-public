@@ -184,6 +184,7 @@ SMART_CRAFT_BUY_UPGRADES = True        # buy affordable bar-cost upgrades after 
 SMART_CRAFT_MAX_BUYS = 20              # upgrade purchases per cycle
 SMART_CRAFT_MAX_ROUNDS = 3             # read -> craft -> buy rounds per cycle (more levels)
 SMART_CRAFT_USE_5X = True              # switch the Craft page to 5x before crafting
+SMART_CRAFT_YIELD = True               # pause between steps for auto workflows waiting for the action lock
 SMART_CRAFT_WORKSHOP = True            # also craft for and buy permanent Workshop upgrades (after Upgrades)
 SMART_CRAFT_FLOOR_TRIPS = False        # mine missing ore on a lower floor, then return
 SMART_CRAFT_FLOOR_TRIP_S = 600.0       # time spent on the lower floor per trip

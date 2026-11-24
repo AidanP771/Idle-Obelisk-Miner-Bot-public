@@ -156,6 +156,7 @@ SETTINGS = {
            "SMART_CRAFT_MAX_ROUNDS": number(1, 20, integer=True),
            "SMART_CRAFT_USE_5X": boolean,
            "SMART_CRAFT_WORKSHOP": boolean,
+           "SMART_CRAFT_YIELD": boolean,
            "SMART_CRAFT_FLOOR_TRIPS": boolean,
            "SMART_CRAFT_FLOOR_TRIP_S": number(60, 7200),
            "SMART_CRAFT_SELL_SURPLUS_ORE": boolean,

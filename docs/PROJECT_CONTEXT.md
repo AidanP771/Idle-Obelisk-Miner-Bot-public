@@ -201,6 +201,15 @@ lazy imports to avoid circular imports. Level detection writes
   read -> craft -> buy round repeats while purchases happen, up to
   `SMART_CRAFT_MAX_ROUNDS` (default 3); then the menu is closed. Coin upgrades are never
   bought; bars are never sold.
+  Pausing (`SMART_CRAFT_YIELD`, default on): a cycle holds the action lock for
+  minutes. Auto workflows that find the lock busy are recorded in
+  `state.workflows_waiting` (slug -> time, entries older than 30 s are ignored).
+  Before each page it opens and between bars, Smart Craft checks that list; when
+  a workflow waits, it closes the menu (only if the X is gone afterwards),
+  releases the lock, calls `workflows.retry_waiting_now()` so they run at the
+  next tick, waits until none waits (max 300 s), takes the lock back and
+  reopens its page. Scan results stay in memory, so the cycle continues
+  instead of rescanning. A cancel during the pause ends the cycle without taps.
   Workshop (`SMART_CRAFT_WORKSHOP`, default on): each round also opens
   Permanent -> Workshop (`workshop_header.png`) and reads the buyable rows
   (up to three bar costs, "have/" above "need"; icons grouped per row). Their

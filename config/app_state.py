@@ -34,6 +34,9 @@ workflows_master_enabled = False
 workflows = {}
 # Slug of the workflow currently executing a step (None if idle).
 workflows_running = None
+# Auto workflows whose last attempt found the action lock busy:
+# slug -> time of that attempt. Long lock holders (Smart Craft) pause for them.
+workflows_waiting = {}
 
 # ========= Feature flags =========
 gem_statistics_enabled = True
