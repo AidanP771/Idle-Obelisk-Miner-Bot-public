@@ -859,7 +859,7 @@ def _read_stable_row(bar):
     return None
 
 
-_NO_CRAFT_ROW_S = 1800.0   # recheck a bar without a Craft row after this long
+_NO_CRAFT_ROW_S = 300.0    # recheck a bar without a Craft row after this long (new ores unlock often)
 _no_craft_row = {}          # bar -> time its icon was missing from every Craft page
 
 

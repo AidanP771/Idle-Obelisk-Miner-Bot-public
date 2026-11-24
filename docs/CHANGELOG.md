@@ -12,6 +12,25 @@ Local, unversioned changes (`config/user_workflows.json`,
 
 ## 2026-11-24
 
+### Drone point check, floor Auto guard, 5 min skip (this entry's commit)
+- Bars without a Craft row are skipped for 5 min instead of 30 (user: new
+  ores unlock often).
+- New workflow step `read_number` (validation, editor, tests): read digits in
+  a ROI with the Smart Craft glyph reader, store them, or check they
+  increased/changed within the run. `buy_drone_points` reads the drone point
+  counter before Max and after Exchange; unreadable or unchanged -> close the
+  Drones menu and abort the prestige. Engine dry run: 6 -> 7 ok; 6 -> 6 and
+  unreadable close the menu and abort. Behaviour change: with gold below one
+  point's price (about 302) the prestige now waits until enough gold accrues.
+- New feature `features/floor_auto.py` (`FLOOR_AUTO_GUARD`, default on;
+  `FLOOR_AUTO_CHECK_INTERVAL_S` 30 s; WebUI): switches floor Auto back on when
+  the toggle is dark red; reads the cached screenshot without the lock, confirms
+  under the lock on a fresh frame, verifies green. Never during Smart Craft floor
+  trips, while paused, or when the button is not visible. Real frames: off /
+  on / menu read as False / True / None.
+- Verified: 322 Python and 27 JS tests. Needs a restart.
+
+
 ### Audit phase 3: fewer pauses, fewer screenshots, safe key file (`9f0724d`)
 - Smart Craft yield policy: pause at once only for
   `SMART_CRAFT_YIELD_PRIORITY` (`obelisk_fight,auto_prestige,lootbug`); other
@@ -278,3 +297,4 @@ Backups of each step are kept in the session scratchpad, not in the repo.
 | 2026-11-24 | `user_workflows.json` | `bomb_rotation_early_game`: Plenty/Basic/Chain conditions `use_prev_screenshot` (needs the restart). |
 | 2026-11-24 | `user_settings.json` | `startup_defaults.freebies_enabled` and `lootbug_enabled` true (both stayed off after every restart). |
 | 2026-11-24 | `user_settings.json` | `FREEBIES_DIAMONDS_PER_CLAIM` 28 -> 5 (the pack gives 5; earlier gem statistics are overcounted). |
+| 2026-11-24 | `user_workflows.json` | `buy_drone_points`: `read_number` of the drone point counter before Max and after Exchange; unreadable or not increased -> close menu, abort (needs the restart). |

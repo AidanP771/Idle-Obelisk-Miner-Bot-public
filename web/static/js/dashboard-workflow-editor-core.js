@@ -35,6 +35,7 @@ const STEP_TYPES = [
   {value:'click_rotating',  label:'Click Rotating Template'},
   {value:'wait',            label:'Wait (Sleep)'},
   {value:'defer',           label:'Defer Next Run'},
+  {value:'read_number',     label:'Read Number (store / compare)'},
   {value:'rainbow_check',   label:'Rainbow Floor Check'},
   {value:'call_workflow',   label:'Call Workflow'},
   {value:'hold_and_wiggle', label:'Hold & Wiggle (chained swipes)'},
@@ -101,6 +102,14 @@ const STEP_FIELDS = {
   ],
   'wait': [
     {k:'seconds',             label:'Seconds',                        type:'num', step:0.1},
+  ],
+  'read_number': [
+    {k:'roi',                 label:'ROI (x1,y1,x2,y2)',              type:'roi'},
+    {k:'key',                 label:'Key',                            type:'text', hint:'Name of the value within this run, e.g. drone_points.'},
+    {k:'expect',              label:'Expect',                         type:'select', options:['store','increased','changed'], hint:'store: remember the number. increased/changed: compare with the number stored earlier in the same run; otherwise the step fails.'},
+    {k:'optional',            label:'Optional (no fail if missing)',  type:'bool', hint:'A failed read or comparison skips the step (an If "last step failed" can react) instead of aborting.'},
+    {k:'use_prev_screenshot', label:'Use Prev Screenshot',            type:'bool'},
+    {k:'sleep_after',         label:'Sleep After (s)',                type:'num', step:0.05},
   ],
   'defer': [
     {k:'seconds',             label:'Seconds',                        type:'num', step:10, hint:'The next automatic run of this workflow (the top-level one, also from a called helper) is not before now + Seconds. The current run continues.'},

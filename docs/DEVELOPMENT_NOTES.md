@@ -57,7 +57,7 @@ Measured at 900 x 1600, English UI. Coordinates are full-resolution pixels.
 - Each Upgrades row costs either bars or gold (coin icon, e.g. Pickaxe Crit Damage 0/60, Free Bomb Chance 0/80); no row with both was seen on 30 saved rows (2026-11-24). Gold rows have the same Buy button (bright red = affordable).
 
 ### Workshop (Permanent -> Workshop)
-- After a prestige (floor 5, 2026-11-24) the Craft page has no rows for adamant/amethyst/citrine/runite/topaz (inferred: their searches failed while mithril's row was read); each search cost 9-14 s per round until such bars were remembered as not craftable for 30 min.
+- After a prestige (floor 5, 2026-11-24) the Craft page has no rows for adamant/amethyst/citrine/runite/topaz (inferred: their searches failed while mithril's row was read); each search cost 9-14 s per round until such bars were remembered as not craftable for 5 min (30 min at first; the user: new ores unlock often).
 - "Unlock At" rows: `unlock_at.png` scores 0.857-1.0 on locked rows; the label "Bomb Of Plenty Unlocked" scores 0.79, hence the extra rule "below every Buy button".
 - The third cost column renders digits one sub-pixel shifted; its '4' matched no reference clearly, so every third-column cost with a 4 (amethyst/runite/citrine "14/", "74/") was unreadable and the row skipped (248 times in one log, 2026-11-24). Added `digits/4_3.png` from a live frame; on 239 saved frames only the failing frame's reads changed (both rows now read). Regression crops: `tests/data/smart_craft/`.
 - Header "Spend Bars on Permanent Upgrades!"; rows cost up to three bar types,
@@ -104,6 +104,9 @@ Timing (2026-11-24): a lootbug could stay on screen for minutes. Scans ran only 
 - The number under the floor button is the clear counter, not the floor.
 - After a prestige: floor 1, floor Auto stayed **on**.
 - Not yet verified: whether a floor tap asks for confirmation; whether leaving a floor resets its clear counter.
+
+- The drone point counter on the Drones page (about x 765-895, y 172-202) uses the same pixel font as Smart Craft; the glyph reader read 6, 5 and 6 correctly on three saved frames (single digits only so far).
+- The floor Auto toggle is read by colour (green on, dark red off) at a fixed spot below the floor button; workflow template matching cannot do this (grayscale), hence a code feature.
 
 ### Obelisk
 - After the 2026-11-24 prestige the damage warning stayed; the old workflow opened and closed the obelisk every 60 s (about 5 s of lock and 3 taps each).
@@ -156,7 +159,7 @@ replaces the default workflows. The reference setup uses:
 | `auto_prestige` | on, 600 s | If `hud/level_capped_tpl` (0.9) is visible -> call `prestige`. |
 | `prestige` | helper | Open Prestige page, swipe down twice (scroll to top); only if the Prestige button is visible -> close menu, call `prestige_execute`; else close menu. Drone points are therefore bought only right before a prestige. |
 | `prestige_execute` | helper | Sell All (two taps), call `buy_drone_points`, open Prestige page, press Prestige (2 clicks), close. |
-| `buy_drone_points` | helper | Drones -> Upgrades nav, tap the "Drone Upgrades" top tab ([150,112,340,148]), swipe down 3x in area [80,420,820,1350] (scroll to top), click `drones/drone_max_tpl` (optional), `if last_step_failed` -> close menu + re-check Max (fails), click `drones/drone_exchange_tpl` (optional), same check. A miss closes the Drones menu and aborts the chain, so no prestige happens with unspent gold and no menu is left open. |
+| `buy_drone_points` | helper | Drones -> Upgrades nav, tap the "Drone Upgrades" top tab ([150,112,340,148]), swipe down 3x in area [80,420,820,1350] (scroll to top), click `drones/drone_max_tpl` (optional), `if last_step_failed` -> close menu + re-check Max (fails), click `drones/drone_exchange_tpl` (optional), same check. A miss closes the Drones menu and aborts the chain, so no prestige happens with unspent gold and no menu is left open. Since 2026-11-24 it also reads the drone point counter (`read_number`, ROI [765,172,895,202], key `drone_points`) before Max and after Exchange; unreadable or not increased -> close the menu and abort the prestige. Note: with gold below one point's price the prestige is now postponed until enough gold accrues. |
 | `level_up_early_game` | off | Aborts at the locked Contracts tile and leaves the menu open; competes with Smart Craft. |
 | `craft_upgrades_early_game` | inactive | Replaced by Smart Craft. |
 
@@ -218,7 +221,7 @@ Pitfalls:
 
 ## Open Items
 
-- `buy_drone_points` cannot see whether points were bought (gold below one point's price); a digit-reading workflow step for the drone point counter would make it visible (audit item 12, not built).
+- Drone point check and floor Auto guard (2026-11-24): not yet observed live. Look for `[WF] read_number drone_points=` (two lines per prestige, the second increased) and `[FLOOR_AUTO]` lines.
 - Smart Craft yield policy (2026-11-24): check that bombs now run about once per 45-60 s during a cycle and that cycles pause less often.
 - Restart pending (2026-11-24, all code since `267d269`): floor-trip Auto handling, gold upgrades option, Pause after current, Lootbug lock waiting, craft target `next`, exec-out screenshots, page polling, the new '4' glyph. After the restart check the log for `method=exec_out`, `floor trip ... returning after`, `[LOOTBUG] lootbug visible ... waiting`, and Smart Craft cycle length. Floor Auto was off on 2026-11-24 and must be switched on once by hand.
 - Obelisk timer scheduling (not built): the HUD countdown (`m:ss`, about (805-885, 475-505)) uses the pixel font at 17 px height; the Smart Craft glyph set reads only some digits there, and ':' breaks segmentation. It needs its own digit references and a workflow step that sets the next due time. Current cost of polling: one screenshot per 60 s, at most about 60 s late per 20 min cooldown.

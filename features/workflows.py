@@ -52,6 +52,7 @@ _manual_lock = threading.Lock()
 _reload_evt = threading.Event()
 _call_stack = []                      # active call_workflow chain (recursion guard)
 _defer_until = 0.0                    # set by a 'defer' step; applied to the top-level WF's next run
+_numbers = {}                         # read_number values of the current top-level run (key -> int)
 _last_click_template_missed = False   # per-step flag: True when click_template
                                       # didn't find its template (even if optional
                                       # saved the step from failing). Consumed by
@@ -380,6 +381,52 @@ def _step_defer(step: dict, wf: dict) -> bool:
     return True
 
 
+def _read_number_in(img_gray, roi):
+    """Digits in roi via the Smart Craft glyph reader (same pixel font), or None."""
+    from features import smart_craft  # lazy: heavy module, glyphs loaded at its start()
+    if not smart_craft._glyphs:
+        smart_craft.load_templates()
+    text = smart_craft.read_text(img_gray, roi)
+    return smart_craft.parse_int(text) if text else None
+
+
+def _step_read_number(step: dict, wf: dict) -> bool:
+    """Read a number inside `roi` and remember it as `key` for this run.
+    expect: "store" (default) | "increased" | "changed" - compare with the value
+    stored earlier in the same run. A failed read or expectation fails the step;
+    with `optional` it is skipped instead (last_step_failed is then true)."""
+    global _last_click_template_missed
+    key = str(step.get("key", "")).strip() or "value"
+    expect = str(step.get("expect", "store"))
+    optional = bool(step.get("optional", False))
+    roi = tuple(int(v) for v in step.get("roi", ()))
+    img = _wf_screen(force=not bool(step.get("use_prev_screenshot", False)))
+    value = None
+    if img is not None and len(roi) == 4:
+        gray = img if img.ndim == 2 else cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        value = _read_number_in(gray, roi)
+    before = _numbers.get(key)
+    if value is None:
+        ok, why = False, "unreadable"
+    elif expect == "store":
+        ok, why = True, "stored"
+    elif before is None:
+        ok, why = False, "nothing stored to compare with"
+    elif expect == "increased":
+        ok, why = value > before, f"{'increased' if value > before else 'did not increase'} from {before}"
+    else:
+        ok, why = value != before, f"{'changed' if value != before else 'unchanged'} from {before}"
+    if value is not None and expect == "store":
+        _numbers[key] = value
+    _log_step(f"[WF] read_number {key}={value} ({why})" + ("" if ok else (" [optional]" if optional else " [FAIL]")), wf)
+    if ok:
+        return True
+    if optional:
+        _last_click_template_missed = True
+        return True
+    return False
+
+
 def _step_wait(step: dict, wf: dict) -> bool:
     secs = float(step.get("seconds", 0.0))
     _log_step(f"[WF] wait {secs}s", wf)
@@ -617,6 +664,7 @@ _STEP_EXECUTORS = {
     "click_rotating": _step_click_rotating,
     "wait": _step_wait,
     "defer": _step_defer,
+    "read_number": _step_read_number,
     "rainbow_check": _step_rainbow_check,
     "call_workflow": _step_call_workflow,
     "hold_and_wiggle": _step_hold_and_wiggle,
@@ -920,8 +968,10 @@ def _eligible_workflows():
 
 
 def _reset_defer():
+    """Start of a top-level run: no pending defer, no remembered numbers."""
     global _defer_until
     _defer_until = 0.0
+    _numbers.clear()
 
 
 def _apply_defer(rt):

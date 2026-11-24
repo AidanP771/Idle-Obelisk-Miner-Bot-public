@@ -200,6 +200,7 @@ function _defaultStep(type){
   if(type==='click_rotating')  Object.assign(s, {template:'', roi:[0,0,900,1600], threshold:0.95, rotations:24, mask:'circle', downscale:2, offset_x:0, offset_y:0, jitter:4, clicks:1, click_interval_s:0.5, optional:false, use_prev_screenshot:false, log_mode:'both'});
   if(type==='wait')            Object.assign(s, {seconds:1.0});
   if(type==='defer')           Object.assign(s, {seconds:900});
+  if(type==='read_number')     Object.assign(s, {roi:[0,0,900,1600], key:'value', expect:'store', optional:false, use_prev_screenshot:false});
   if(type==='rainbow_check')   Object.assign(s, {roi:[115,269,813,1041], sat_min:180, val_min:150, min_sat_pixels:40000, min_hue_buckets:5, min_pixels_per_bucket:200, hue_buckets:12, min_hue_entropy:1.5, optional:false, use_prev_screenshot:false});
   if(type==='call_workflow')   Object.assign(s, {target:''});
   if(type==='hold_and_wiggle') Object.assign(s, {roi:[123,247,768,1060], duration_s:5.0, step_ms:200, max_step_px:120});

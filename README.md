@@ -73,6 +73,7 @@ Freebie, Lootbug, Founders, Level and Notices scans have progress bars and count
 | **FOUNDERS BUNDLE** | Enables or pauses the independent Founders worker. |
 | **Smart Craft** | Enables (and immediately runs) or pauses Smart Craft; switching OFF cancels a running cycle at the next step. |
 | **Notices** | Enables or pauses automatic saving and dismissal. The saved inbox remains available while OFF. |
+| *(automatic)* Floor Auto guard | When the floor **Auto** toggle (auto-descend) is found off, it is switched back on (`FLOOR_AUTO_GUARD`, on by default; not during Smart Craft floor trips). |
 | **Pause after current** | Lets whatever currently drives the game (a workflow, a Smart Craft cycle, a Lootbug or Freebies run) finish, then starts nothing new: no workflow (queued manual runs wait), Smart Craft cycle, Lootbug, Freebies, Founders or Notices run until **Resume**. The button shows *Pausing…* while the last action finishes and *Paused – Resume* afterwards. Level detection keeps reading. Not kept across restarts. |
 | **Reload** | Requests application of saved workflow definitions after the current execution finishes. |
 | **Restart** | Restarts the process to apply general settings and startup defaults. |

@@ -193,7 +193,7 @@ lazy imports to avoid circular imports. Level detection writes
   `have/need`), stopping at the locked "Unlock At Level" section (no further
   scroll once `unlock_at.png` is visible below every Buy button). Per bar
   type the target depends on `SMART_CRAFT_CRAFT_TARGET` (bars whose icon is on
-  no Craft page, e.g. not unlocked after a prestige, are skipped for 30 min): `next` (default) =
+  no Craft page, e.g. not unlocked after a prestige, are skipped for 5 min): `next` (default) =
   the cheapest row's need (enough for the next purchase; the following round
   crafts for the next one), `all` = the sum of all needs (before 2026-11-24
   the only mode; it usually turns all ore into bars). Rows with two costs (two bars, or
@@ -451,6 +451,16 @@ rationale is not documented:
   takes the action lock must check the flag too.
 - Workflow `if` conditions accept `use_prev_screenshot` (reuse the workflow's
   last frame if it is at most `WORKFLOWS_SCREEN_REUSE_AGE_S` old) like click steps.
+- Workflow step `read_number` (`roi`, `key`, `expect`: store | increased |
+  changed, `optional`): reads digits with the Smart Craft glyph reader and
+  remembers them for the current top-level run; increased/changed compare with
+  the stored value. A failed read or comparison fails the step (with
+  `optional`: `last_step_failed` is true). Used for the drone point counter.
+- Floor Auto guard (`features/floor_auto.py`, `FLOOR_AUTO_GUARD`, default on,
+  every `FLOOR_AUTO_CHECK_INTERVAL_S` = 30 s): reads the toggle on the latest
+  cached `game_scr` (no lock); only if it is dark red (off) it takes the action
+  lock, confirms on a fresh frame, taps it and verifies green. Skipped during a
+  Smart Craft floor trip, while paused, and when the button is not visible.
 - Workflow step `defer` (`seconds`): the next automatic run of the top-level
   workflow (also when reached inside a called helper) is not before now +
   seconds; the current run continues. Used to back off when a check cannot

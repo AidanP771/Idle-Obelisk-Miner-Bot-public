@@ -167,6 +167,28 @@ class WorkflowSafetyTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             validate_workflows({"wf": {"steps": [{"type": "defer", "seconds": 0}]}})
 
+    def test_read_number_stores_and_checks_increase_within_one_run(self):
+        import numpy as np
+        self.w.get_screen.return_value = (np.zeros((20, 20), np.uint8), 20, 20)
+        readings = iter([6, 6, 5, 7, None])   # store, check, no-stored-value run, 6 -> 7, unreadable
+        self.w._read_number_in = lambda gray, roi: next(readings)
+        store = {"type": "read_number", "roi": [0, 0, 10, 10], "key": "dp", "expect": "store"}
+        check = {"type": "read_number", "roi": [0, 0, 10, 10], "key": "dp", "expect": "increased", "optional": True}
+        steps = [store, check, {"type": "if", "branches": [{"condition": {"kind": "last_step_failed"},
+                 "steps": [{"type": "tap_xy", "x": 1, "y": 2}]}]}]
+        self.assertEqual(self.w._run_workflow("wf", {"steps": steps}), "ok")
+        self.w.tap.assert_called_once()                      # 6 -> 6: not increased, branch ran
+        self.w.tap.reset_mock()
+        self.w._reset_defer()                                # next top-level run
+        self.assertEqual(self.w._run_workflow("wf", {"steps": [dict(check, optional=False)]}), "error")  # nothing stored
+        self.w._numbers["dp"] = 6
+        self.assertEqual(self.w._run_workflow("wf", {"steps": [dict(check, optional=False)]}), "ok")     # 6 -> 7
+        self.assertEqual(self.w._run_workflow("wf", {"steps": [store]}), "error")                       # unreadable
+        from config.validation import validate_workflows
+        validate_workflows({"wf": {"steps": [store, check]}})
+        with self.assertRaises(ValueError):
+            validate_workflows({"wf": {"steps": [dict(store, expect="bigger")]}})
+
     def test_master_off_during_last_step_is_cancelled_and_does_not_count(self):
         def turn_off(*args, **kwargs):
             self.w.toggle_master()

@@ -68,6 +68,7 @@ def run():
     from features import workflows as workflows_feature
     from features import detect_level as detect_level_feature
     from features import smart_craft as smart_craft_feature
+    from features import floor_auto as floor_auto_feature
     freebies_feature.start()
     lootbug_feature.start()
     founders_feature.start()
@@ -75,6 +76,7 @@ def run():
     workflows_feature.start()
     detect_level_feature.start()
     smart_craft_feature.start()
+    floor_auto_feature.start()
     bot_log(f"[STARTUP] Freebies feature armed (enabled={state.freebies_enabled})")
     bot_log(f"[STARTUP] Lootbug feature armed (enabled={state.lootbug_enabled})")
     bot_log(f"[STARTUP] Founders feature armed (enabled={state.founders_enabled})")
