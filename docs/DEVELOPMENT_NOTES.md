@@ -108,6 +108,8 @@ Measured at 900 x 1600, English UI. Coordinates are full-resolution pixels.
   The HUD top-left shows `PP(+gain)`.
 - First automatic prestige ran 2026-11-23 17:54: 29 -> 230 PP, level 45 -> 1, cap 45 -> 50.
 - The Prestige page keeps its scroll position. The Prestige box is at the top, above Artifacts and the PP upgrades; a scrolled-down page hides it (seen 2026-11-23 21:45, after Obelisk 4 added rows).
+- The Drones page also keeps its scroll position. On 2026-11-23 23:12 a single mid swipe did not reach the top, the fixed-coordinate Max/exchange taps missed, and the prestige ran with unspent gold. Fixed with templates and three fast swipes.
+- Saving workflows from a WebUI editor that was opened before a file edit overwrites that edit (22:51: an interval change dropped the Prestige scroll step).
 - Wiki (Prestige page): Drone Points are permanent (kept on prestige), as are Relics, Artifacts, Veins, bomb charges, challenge progress and items. The wiki does not say whether drone upgrades bought with Drone Points are kept; unverified.
 - Drones page "Exchange Gold for Drone Points": quantity buttons 1x/5x/25x/250x/Max at y 250 (Max x 716), exchange button at (450, 352).
 
@@ -130,7 +132,7 @@ replaces the default workflows. The reference setup uses:
 | `auto_prestige` | on, 600 s | If `hud/level_capped_tpl` (0.9) is visible -> call `prestige`. |
 | `prestige` | helper | Open Prestige page, swipe down twice (scroll to top); only if the Prestige button is visible -> close menu, call `prestige_execute`; else close menu. Drone points are therefore bought only right before a prestige. |
 | `prestige_execute` | helper | Sell All (two taps), call `buy_drone_points`, open Prestige page, press Prestige (2 clicks), close. |
-| `buy_drone_points` | helper | Drones -> Upgrades tab, Max (716,250), exchange (450,352). |
+| `buy_drone_points` | helper | Drones -> Upgrades tab, swipe down 3x (scroll to top), click `drones/drone_max_tpl`, click `drones/drone_exchange_tpl`. Both are required: a miss aborts the chain, so no prestige happens with unspent gold. |
 | `level_up_early_game` | off | Aborts at the locked Contracts tile and leaves the menu open; competes with Smart Craft. |
 | `craft_upgrades_early_game` | inactive | Replaced by Smart Craft. |
 
