@@ -5,7 +5,8 @@ references, the local early-game workflow setup, verification methods and open
 items. Architecture and feature behavior are described in
 [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md); this file records what was learned
 while building Smart Craft, the obelisk fight, floor trips, surplus-ore selling,
-auto-prestige and the bomb rotation (2026-11-22 to 2026-11-23).
+auto-prestige and the bomb rotation (2026-11-22 to 2026-11-23). The dated list
+of changes is in [CHANGELOG.md](CHANGELOG.md).
 
 ## Environment of the Reference Setup
 
@@ -27,9 +28,14 @@ licence CC BY-NC-SA 4.0). Pages used so far:
 | [Floors](https://shminer.miraheze.org/wiki/Floors) | Ore pairs per floor, 80/20 and 50/50 split, clear requirement (World 1: floor x 5) |
 | [Ores](https://shminer.miraheze.org/wiki/Ores) | Floor range per ore (Tin 1-2, Copper 1-4, Mithril 3-6, Adamant 5-8, Runite 7-10, Citrine 9-12, Amethyst 11-14, Topaz 13-16, Obsidian 15-18, Demonite 17-18, VR-Tin 19-20) |
 | [Craft](https://shminer.miraheze.org/wiki/Craft) | Ore per bar (Tin 5, Copper 6, Mithril 7, Adamant 8, Runite 9, Citrine 10, Amethyst 11), quantities 1x/5x/50x/500x/Max, Craft All at Obelisk 6 |
-| [Prestige](https://shminer.miraheze.org/wiki/Prestige) | Minimum level 20; resets level, gold, ores, bars, contracts and "This Prestige" upgrades; level cap 30 + 5 per obelisk defeated |
+| [Prestige](https://shminer.miraheze.org/wiki/Prestige) | Minimum level 20; resets level, gold, ores, bars, contracts and "This Prestige" upgrades; keeps Relics, Artifacts, Veins, Drone Points, bomb charges, challenge progress and items; tip: sell ore and buy drone points before prestiging; level cap 30 + 5 per obelisk defeated |
+| [Drones](https://shminer.miraheze.org/wiki/Drones) | Drone Points bought with gold (cost +1 gold per two points); spent on drone upgrades and suits. Whether drone upgrades survive prestige is not stated. |
+| [Upgrades](https://shminer.miraheze.org/wiki/Upgrades) | "Upgrades are lost when prestiging" (the World Upgrades menu, bars and gold) |
 | [Bombs](https://shminer.miraheze.org/wiki/Bombs) (stub) | Bomb types and base recharge times (Basic 30 s, Chain 60 s, Plenty 110 s, Exp 120 s); Fire / Fire Slow (1.25 s) / Fire All |
 | Obelisk (main page section) | 30 s fights, 20 min cooldown, armor is subtracted from damage, damage carries over |
+
+Wiki pages were last read 2026-11-23 (game v2.2.52 on the Prestige, Drones and
+Upgrades pages). Add every newly used page to this table with what it was used for.
 
 The wiki does not cover: drop amounts per floor, the floor-select UI, max
 bomb charges, rock respawn timing. Those were measured in game (below).
@@ -93,6 +99,7 @@ Measured at 900 x 1600, English UI. Coordinates are full-resolution pixels.
 
 ### Obelisk
 - Main-screen timer at about (840, 490) shows yellow `0:00` when ready.
+- The 20 min cooldown starts after the most recent fight (user observation 2026-11-23); a skipped fight does not start it.
 - The fight needs a **hold** on the obelisk at (450, 800); a fight lasts about 34 s. ADB commands time out at 30 s, so the workflow holds 5 x 8 s.
 - After the fight: Exit, then "Return To Mines".
 - The red "Warning: Pickaxe Damage is lower than Obelisk Armor" box (`damage_warning_tpl`) means a fight deals 0 damage; the workflow closes without fighting, so the 20 min cooldown is not spent.
@@ -142,8 +149,11 @@ Templates for these workflows are versioned under `images/workflows/obelisk/`,
 `images/workflows/hud/` and `images/workflows/menu/close_menu_tpl.png`. The
 default `pins/close_pin_tpl.png` scores only about 0.65 on this setup.
 
-Local settings (`config/user_settings.json`): `startup_defaults.SMART_CRAFT_ENABLED = true`.
-Floor trips and surplus-ore selling are off unless enabled in the WebUI.
+Local settings (`config/user_settings.json`): `startup_defaults.SMART_CRAFT_ENABLED = true`;
+`SMART_CRAFT_INTERVAL_S` 300, floor trips and surplus-ore selling on (set by the
+user); Lootbug Free/close templates with `LOOTBUG_CLOSE_POPUP`;
+`FREEBIES_CLOSE_TEMPLATE = workflows/menu/close_menu_tpl.png`. Defaults in
+`config/settings.py` keep floor trips and selling off.
 
 Pitfalls:
 - Two bot processes (seen 2026-11-23: `tray_runner.py` and `main.py` started
@@ -157,6 +167,13 @@ Pitfalls:
   `reload_cfg`); general settings and new templates loaded by features need a
   process restart.
 - Workflow `if` steps cannot be nested; use a helper workflow via `call_workflow` (max depth 5).
+- General settings and code changes need a process restart; on 2026-11-23 a
+  correct Freebies setting had no effect for an hour because the bot ran since
+  before the change. Compare the last `[STARTUP]` log line with the change time.
+- Menu pages keep their scroll position (Prestige, Drones). Scroll to a known
+  end before matching or tapping, and prefer templates over fixed coordinates.
+- A long lock holder starves time-critical workflows; look for
+  `postponed - another feature busy` when timing looks off.
 - Workflow matching is grayscale; a step cannot tell a green toggle from a red one (a 1x/5x button matched both states at 0.95+).
 
 ## Verification Methods
@@ -167,8 +184,11 @@ Pitfalls:
 - Offline checks: save frames from a read-only pass (open page, scroll, close)
   and run the feature's readers on them (`read_upgrade_rows`, `read_craft_row`,
   `read_floor_panel`, `read_sell_rows`). This caught the missing Demonite icon.
-- Live checks: only when the action lock is free and no workflow is due
-  (`/api/state` shows `action_lock`, `workflows` with `next_remaining`).
+- Live checks: never send own ADB taps or swipes while the bot runs, even
+  when `/api/state` shows the lock free; a check is not a lock (a stray tap hit
+  "Setup Pins" twice on 2026-11-23). Screenshots are fine. For taps use a
+  workflow run (`wf_run:<slug>`) or ask the user to pause the bot.
+- Logs: `bot.log` in the project root, rotated to `bot.log.1..3` at 2 MB.
   Prefer read-only navigation; anything that spends resources must be agreed
   with the user first.
 - Template building: crop from a 900 x 1600 screenshot, then score the
@@ -181,6 +201,12 @@ Pitfalls:
 - Surplus-ore selling: full sequence not yet run in game.
 - Smart Craft buys only bar-cost upgrades; gold-cost upgrades (Pickaxe Radius, Bomb Damage, ...) are not bought.
 - Workshop buying is not yet observed live (bars were 0 after the prestige).
+- `SMART_CRAFT_YIELD` and the Freebies close template: verify after the next restart (`pausing for waiting workflow(s)`, `tap close-menu`).
+- `buy_drone_points` with templates not yet run live; `drone_max_tpl` was cut from the unselected (red) Max button, the selected state is unknown.
+- Whether drone upgrades survive prestige: compare before/after the next prestige.
+- `FREEBIES_DIAMONDS_PER_CLAIM` is 28 but this pack gives 5; the pack banks 2 claims and the feature claims one per visit.
+- Skill-Tree (unlocked at Obelisk 4): automation ideas from the wiki discussed, nothing built (user: explore as we go).
+- An Upgrades pin was added to the bottom bar by a stray tap (harmless; remove via Setup Pins).
 - Bomb rotation: pacing is fixed in the workflow; bomb charge counts are not read. Recharge upgrades change the ideal interval.
 - Bar types beyond World 1 floor 20 (VR-Demonite has an ore icon but no bar template yet) need templates as they unlock.
 - The default workflows in `config/config_workflows.py` still contain the original `auto_prestige` (level 127 plus an unconditional floor-Auto tap) and `close_pin_tpl`.

@@ -19,6 +19,7 @@ These instructions apply to the entire project and our ongoing collaboration.
   - [docs/SCREENSHOTS.md](docs/SCREENSHOTS.md): screenshot pipeline and cache.
   - [docs/STATISTICS.md](docs/STATISTICS.md): statistics, uptime, and migration.
   - [docs/DEVELOPMENT_NOTES.md](docs/DEVELOPMENT_NOTES.md): game facts verified in game, game wiki references, the local early-game workflow setup, verification methods, and open items. Read it before game-facing work.
+  - [docs/CHANGELOG.md](docs/CHANGELOG.md): dated change notes for the fork branch, including local configuration changes that git does not track.
 - Keep relevant documentation current when behavior or architecture changes. This file contains working instructions; technical details belong in `docs/`.
 
 ## Approach and Change Scope
@@ -53,3 +54,13 @@ These instructions apply to the entire project and our ongoing collaboration.
 - Do not casually start the bot or perform real game actions for verification. Importing `bot_app.py` can already connect ADB; local startup defaults can enable game actions. Before functional tests, establish the target device, resolution, game language, and flows covered by the task.
 - `TEST-ENVIRONMENT.bat` writes temporary files; `INSTALL-ENVIRONMENT.bat` installs packages; `tools/sync_workflows.py` modifies source code. Use these tools only when their effects belong to the task.
 - At completion, report what changed, which checks actually ran, and any remaining limitations or open points. Simulated tests do not confirm behavior in the real game.
+
+## Documentation Handoff for Future Sessions
+
+After every completed task, before reporting back, keep the agent documentation current so the next session can continue without the conversation:
+
+- [docs/CHANGELOG.md](docs/CHANGELOG.md): add a dated entry (problem, change, commit, how it was verified, what is still unverified). Record local `config/user_*.json` changes in its table, because git ignores them.
+- [docs/DEVELOPMENT_NOTES.md](docs/DEVELOPMENT_NOTES.md): add game facts learned in game, pitfalls, the local workflow table, and open items; remove items that are resolved.
+- Wiki and research: add every wiki page or external source used to the wiki table in the development notes, with what it was used for and the date read. Mark user observations and unverified inferences as such.
+- Update [docs/PROJECT_CONTEXT.md](docs/PROJECT_CONTEXT.md), [README.md](README.md) and this file when behavior, settings, or working rules change.
+- Commit with the code change and push to the fork remote `fork` (<https://github.com/AidanP771/Idle-Obelisk-Miner-Bot-public>), branch `smart-craft-early-game` unless the user names another. Never push local `config/*.json`, secrets, or user-specific data.

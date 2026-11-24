@@ -59,6 +59,9 @@ lazy imports to avoid circular imports. Level detection writes
   against blind repeated taps. No OCR. Details: [Notices](NOTICES.md).
 - **Freebies:** periodic detection using two icon templates, menu opening,
   scrolling to find the claim button, claiming, counting and closing the menu.
+  The close button is matched with `FREEBIES_CLOSE_TEMPLATE` (default
+  `close_menu.png`) inside `FREEBIES_CLOSE_ROI`; layouts with a light-edged X
+  need `workflows/menu/close_menu_tpl.png`, otherwise the shop stays open.
   Enabling wakes the worker for a prompt cycle.
   Startup and each runtime activation use `FREEBIES_CHECK_INTERVAL_S_FIRST`
   (default 300 seconds) until either available-icon template is detected.
