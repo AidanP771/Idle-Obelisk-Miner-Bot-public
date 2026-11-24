@@ -432,9 +432,14 @@ def read_upgrade_rows(img, gray, with_buttons=False):
     cost_area = (_UPGRADE_ICON_X[0], ly1, _UPGRADE_ICON_X[1], ly2)
     bars = find_bar_icons(img, cost_area, threshold)
     # Every cost icon in the cost area (bars and gold) - a row can have two costs.
-    icons = [(x, y) for _b, x, y, _s in bars] + find_all(gray, _tpl("coin.png"), cost_area, 0.9)
+    coins = find_all(gray, _tpl("coin.png"), cost_area, 0.9)
+    icons = [(x, y) for _b, x, y, _s in bars] + coins
+    skip_gold = not getattr(s, "SMART_CRAFT_BUY_GOLD_UPGRADES", False)
     rows = []
     for bar, x, y, _score in bars:
+        if skip_gold and any(abs(cy - y) < 25 for _cx, cy in coins):
+            _log(f"[SMART_CRAFT] {bar} row at y={y} also costs gold -> skipped (SMART_CRAFT_BUY_GOLD_UPGRADES off)")
+            continue
         tx1, ty1, tx2, ty2 = _UPGRADE_TEXT
         # The number ends where the next cost icon of the same row starts.
         text_end = min([ix - 4 for ix, iy in icons if abs(iy - y) < 25 and ix > x + 10] + [x + tx2])
@@ -454,6 +459,58 @@ def read_upgrade_rows(img, gray, with_buttons=False):
         else:
             rows.append((bar, cost[0], cost[1], y))
     return rows
+
+
+def read_gold_rows(img, gray):
+    """[(y, buy_x, buy_y, affordable, cost_crop)] for gold-cost rows (a coin
+    icon and no bar icon in the row) that have a Buy button. The gold amount
+    is not parsed: affordability comes from the Buy button colour, and a
+    purchase is verified by the cost text crop changing."""
+    _lx1, ly1, _lx2, ly2 = _list_roi()
+    cost_area = (_UPGRADE_ICON_X[0], ly1, _UPGRADE_ICON_X[1], ly2)
+    bars = find_bar_icons(img, cost_area, float(getattr(s, "SMART_CRAFT_ICON_THRESHOLD", 0.8)))
+    rows = []
+    for x, y in find_all(gray, _tpl("coin.png"), cost_area, 0.9):
+        if any(abs(by - y) < 25 for _b, _bx, by, _s in bars):
+            continue  # a bar row with a second (gold) cost is handled by read_upgrade_rows
+        bx1, by1, bx2, by2 = _UPGRADE_BUY
+        buy = _button(gray, _tpl("buy.png"), (bx1, max(0, y + by1), bx2, y + by2))
+        if not buy["found"]:
+            continue
+        patch = img[buy["y"]:buy["y"] + buy["h"], buy["x"]:buy["x"] + buy["w"]]
+        tx1, ty1, tx2, ty2 = _UPGRADE_TEXT
+        crop = gray[max(0, y + ty1):y + ty2, x + tx1:x + tx2].astype(np.int16)
+        rows.append((y, buy["cx"], buy["cy"], float(patch[:, :, 2].mean()) > _AFFORDABLE_MIN_RED, crop))
+    return rows
+
+
+def _gold_row_unchanged(before, after):
+    """True if `after` still shows `before`'s row affordable with the same cost text."""
+    y, _bx, _by, _aff, crop = before
+    for ay, _abx, _aby, affordable, acrop in after:
+        if abs(ay - y) < 5 and affordable and acrop.shape == crop.shape:
+            return float(np.abs(acrop - crop).mean()) < 6.0
+    return False
+
+
+def _buy_gold_rows(img, gray, generation, bought, limit):
+    """Buy affordable gold-cost rows on this page; returns (img, gray, bought, stop)."""
+    while bought < limit:
+        _check_cancel(generation)
+        targets = [r for r in read_gold_rows(img, gray) if r[3]]
+        if not targets:
+            return img, gray, bought, False
+        row = targets[0]
+        _tap(row[1], row[2], f"Buy (gold) at y={row[0]}")
+        _delay()
+        img, gray = _fresh()
+        if _gold_row_unchanged(row, read_gold_rows(img, gray)):
+            _log(f"[SMART_CRAFT] gold Buy at y={row[0]} had no visible effect -> stop buying")
+            return img, gray, bought, True
+        bought += 1
+        state.smart_craft_upgrades_bought += 1
+        _log(f"[SMART_CRAFT] bought gold upgrade at y={row[0]}")
+    return img, gray, bought, False
 
 
 def _list_roi():
@@ -571,9 +628,15 @@ def read_workshop_rows(img, gray):
             groups[-1].append((bar, x, y))
         else:
             groups.append([(bar, x, y)])
+    coins = []
+    if not getattr(s, "SMART_CRAFT_BUY_GOLD_UPGRADES", False):
+        coins = find_all(gray, _tpl("coin.png"), (_WORKSHOP_ICON_X[0], ly1, _WORKSHOP_ICON_X[1], ly2), 0.9)
     rows = []
     for group in groups:
         top = min(y for _b, _x, y in group)
+        if any(abs(cy - top) < 25 for _cx, cy in coins):
+            _log(f"[SMART_CRAFT] Workshop row at y={top} also costs gold -> skipped (SMART_CRAFT_BUY_GOLD_UPGRADES off)")
+            continue
         costs = []
         for bar, x, y in sorted(group, key=lambda i: i[1]):
             hx1, hy1, hx2, hy2 = _WORKSHOP_HAVE
@@ -822,7 +885,9 @@ def craft_bar(bar, have, target, generation, quantity=None):
 
 def buy_upgrades(generation):
     """Tap Buy on affordable bar-cost upgrades; each purchase is counted only
-    after a fresh frame shows the row changed. Coin upgrades are left alone."""
+    after a fresh frame shows the row changed. With SMART_CRAFT_BUY_GOLD_UPGRADES
+    gold-cost rows are bought after the bar rows of each page; without it no
+    row with a gold cost is touched (filtered in read_upgrade_rows)."""
     img, gray = _open_page("upgrades_tpl", _upgrades_ready, "Upgrades", generation)
     limit = int(getattr(s, "SMART_CRAFT_MAX_BUYS", 20))
     bought = 0
@@ -845,6 +910,10 @@ def buy_upgrades(generation):
             bought += 1
             state.smart_craft_upgrades_bought += 1
             _log(f"[SMART_CRAFT] bought upgrade at y={y} ({bar} {have}/{need})")
+        if getattr(s, "SMART_CRAFT_BUY_GOLD_UPGRADES", False) and bought < limit:
+            img, gray, bought, stop = _buy_gold_rows(img, gray, generation, bought, limit)
+            if stop:
+                return bought
         if bought >= limit:
             _log(f"[SMART_CRAFT] purchase limit reached ({limit})")
             break

@@ -54,6 +54,8 @@ Measured at 900 x 1600, English UI. Coordinates are full-resolution pixels.
   measurement treats them as ambiguous ("list position unknown"), which ends
   the scan correctly.
 
+- Each Upgrades row costs either bars or gold (coin icon, e.g. Pickaxe Crit Damage 0/60, Free Bomb Chance 0/80); no row with both was seen on 30 saved rows (2026-11-24). Gold rows have the same Buy button (bright red = affordable).
+
 ### Workshop (Permanent -> Workshop)
 - Header "Spend Bars on Permanent Upgrades!"; rows cost up to three bar types,
   each shown as an icon with `have/` on one line and `need` below (grey text).
@@ -209,7 +211,7 @@ Pitfalls:
 
 - Floor trips: no trip has run yet. Every attempt since at least 2026-11-24 08:00 moved 19 -> 11 and back within 7 s (Auto unreadable) and left Auto off; fixed in code, needs a restart and a live trip.
 - Surplus-ore selling: full sequence not yet run in game.
-- Smart Craft buys only bar-cost upgrades; gold-cost upgrades (Pickaxe Radius, Bomb Damage, ...) are not bought.
+- Gold upgrades (`SMART_CRAFT_BUY_GOLD_UPGRADES`, off by default): not yet run live; offline the reader finds the gold rows on four saved frames, all unaffordable (gold 0), so a lit gold Buy button has not been seen yet.
 - Workshop buying is not yet observed live (bars were 0 after the prestige).
 - `SMART_CRAFT_YIELD` and the Freebies close template: verify after the next restart (`pausing for waiting workflow(s)`, `tap close-menu`).
 - `buy_drone_points`: tab tap plus the swipe area are not yet confirmed live; `drone_max_tpl` was cut from the unselected (red) Max button, the selected state is unknown.

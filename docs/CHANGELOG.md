@@ -12,6 +12,19 @@ Local, unversioned changes (`config/user_workflows.json`,
 
 ## 2026-11-24
 
+### Smart Craft: optional gold upgrades (this entry's commit)
+- Request: an option to enable or disable upgrades that cost gold.
+- In game each upgrade costs either bars or gold; Smart Craft only ever bought
+  bar rows. New setting `SMART_CRAFT_BUY_GOLD_UPGRADES` (default off = never
+  spend gold, as before; WebUI hint). On: after the bar rows of each page, buy
+  every gold row whose Buy button is lit; a purchase counts only when a fresh
+  frame shows the row unaffordable or its cost text changed. Off also skips a
+  row that would cost bars and gold (none seen; before, such a row would have
+  been bought).
+- Verified: 287 Python and 14 JS tests; offline the gold reader finds the gold
+  rows on four real frames (all unaffordable). Not verified live.
+
+
 ### Floor Auto restored after floor trips; bombs, drones and menus (`9f734b3`)
 - Problem: floor auto-descend was off. Every Smart Craft floor trip since at
   least 08:00 moved 19 -> 11 and straight back (6-7 s) with "floor Auto toggle

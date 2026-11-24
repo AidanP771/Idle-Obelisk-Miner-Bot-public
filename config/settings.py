@@ -181,6 +181,7 @@ SMART_CRAFT_ENABLED = False            # startup default; runtime toggle is sepa
 SMART_CRAFT_INTERVAL_S = 600.0
 SMART_CRAFT_BUSY_RETRY_S = 15.0
 SMART_CRAFT_BUY_UPGRADES = True        # buy affordable bar-cost upgrades after crafting
+SMART_CRAFT_BUY_GOLD_UPGRADES = False  # True: also buy affordable gold-cost upgrades; False: never spend gold (keeps it for drone points)
 SMART_CRAFT_MAX_BUYS = 20              # upgrade purchases per cycle
 SMART_CRAFT_MAX_ROUNDS = 3             # read -> craft -> buy rounds per cycle (more levels)
 SMART_CRAFT_USE_5X = True              # switch the Craft page to 5x before crafting

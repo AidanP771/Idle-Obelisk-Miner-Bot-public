@@ -202,8 +202,14 @@ lazy imports to avoid circular imports. Level detection writes
   Buy on each affordable bar-cost row (bright button and `have >= need`), up
   to `SMART_CRAFT_MAX_BUYS`. Buying raises the next level's cost, so the
   read -> craft -> buy round repeats while purchases happen, up to
-  `SMART_CRAFT_MAX_ROUNDS` (default 3); then the menu is closed. Coin upgrades are never
-  bought; bars are never sold.
+  `SMART_CRAFT_MAX_ROUNDS` (default 3); then the menu is closed. Bars are never sold.
+  Gold (`SMART_CRAFT_BUY_GOLD_UPGRADES`, default off): in game an upgrade costs
+  either bars or gold. Off, no row with a gold cost is read or bought, so gold
+  stays for drone points. On, after the bar rows of each list page, every
+  gold-cost row with a lit (affordable) Buy button is bought (`read_gold_rows`:
+  coin icon and no bar icon in the row). The gold amount is not parsed; a
+  purchase counts when a fresh frame shows the row no longer affordable or its
+  cost text changed, otherwise buying stops.
   Pausing (`SMART_CRAFT_YIELD`, default on): a cycle holds the action lock for
   minutes. Auto workflows that find the lock busy are recorded in
   `state.workflows_waiting` (slug -> time, entries older than 30 s are ignored).

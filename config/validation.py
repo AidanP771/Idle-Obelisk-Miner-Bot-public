@@ -152,6 +152,7 @@ SETTINGS = {
         N="SMART_CRAFT_UI_DELAY_S", roi="SMART_CRAFT_LIST_ROI", I="SMART_CRAFT_TAP_JITTER_PX",
         UNIT="SMART_CRAFT_ICON_THRESHOLD SMART_CRAFT_BUTTON_THRESHOLD", LOG="SMART_CRAFT_LOG_LEVEL")
         | {"SMART_CRAFT_BUY_UPGRADES": boolean,
+           "SMART_CRAFT_BUY_GOLD_UPGRADES": boolean,
            "SMART_CRAFT_MAX_BUYS": number(1, 200, integer=True),
            "SMART_CRAFT_MAX_ROUNDS": number(1, 20, integer=True),
            "SMART_CRAFT_USE_5X": boolean,

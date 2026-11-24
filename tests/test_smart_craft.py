@@ -324,6 +324,7 @@ class WorkshopTests(SmartCraftBase):
         super().setUp()
         self.settings.SMART_CRAFT_LIST_ROI = (40, 170, 860, 1395)
         f = self.feature
+        f.find_all = Mock(return_value=[])                     # no coin icons
         f.find_bar_icons = Mock(return_value=[("mithril", 145, 596, 0.9), ("adamant", 330, 597, 0.9),
                                               ("runite", 513, 597, 1.0), ("citrine", 145, 980, 0.9)])
         # (icon x, icon y) -> ("have/" line, "need" line), as rendered in the Workshop
@@ -351,6 +352,16 @@ class WorkshopTests(SmartCraftBase):
                           [("citrine", 300, 300)]])
         self.assertEqual([r["affordable"] for r in rows], [False, True])
 
+    def test_workshop_rows_with_a_gold_cost_are_skipped_unless_gold_upgrades_are_on(self):
+        f = self.feature
+        f.find_all = Mock(return_value=[(700, 975)])          # coin in the citrine row
+        rows = f.read_workshop_rows(self.img, None)            # default off
+        self.assertEqual([r["costs"][0][0] for r in rows], ["mithril"])
+        f.find_all.reset_mock()
+        self.settings.SMART_CRAFT_BUY_GOLD_UPGRADES = True
+        self.assertEqual(len(f.read_workshop_rows(self.img, None)), 2)
+        f.find_all.assert_not_called()                         # no coin search when gold may be spent
+
     def test_buys_only_rows_with_all_costs_met(self):
         f = self.feature
         f._open_page = Mock(return_value=(self.img, None))
@@ -375,6 +386,62 @@ class TwoCostTests(SmartCraftBase):
         self.assertEqual([r[0] for r in rows], ["tin", "copper"])
         first_roi = f.read_text.call_args_list[0].args[1]
         self.assertEqual(first_roi[2], 516)   # copper icon at x=520 minus 4
+
+    def test_rows_with_a_gold_cost_are_skipped_unless_gold_upgrades_are_on(self):
+        f = self.feature
+        f.find_bar_icons = Mock(return_value=[("tin", 300, 400, 0.99), ("copper", 300, 600, 0.99)])
+        f.find_all = Mock(return_value=[(520, 402)])          # coin in the tin row only
+        f._button = Mock(return_value={"found": True})
+        f.read_text = Mock(return_value="3/10")
+        self.assertEqual([r[0] for r in f.read_upgrade_rows(None, None)], ["copper"])   # default off
+        self.settings.SMART_CRAFT_BUY_GOLD_UPGRADES = True
+        self.assertEqual([r[0] for r in f.read_upgrade_rows(None, None)], ["tin", "copper"])
+
+
+class GoldUpgradeTests(SmartCraftBase):
+    """Gold-cost rows: coin icon, no bar icon; bought only with the option on."""
+    def setUp(self):
+        super().setUp()
+        self.settings.SMART_CRAFT_LIST_ROI = (40, 170, 860, 1395)
+        f = self.feature
+        f.find_bar_icons = Mock(return_value=[("adamant", 340, 297, 0.99)])
+        f.find_all = Mock(return_value=[(341, 472), (341, 819)])   # two gold rows
+        self.img = np.zeros((1600, 900, 3), np.uint8)
+        self.img[440:500, 700:800, 2] = 170                        # first gold row: lit Buy
+        self.gray = np.zeros((1600, 900), np.uint8)
+        f._button = Mock(side_effect=lambda g, tpl, roi: {"found": True, "x": 700, "y": roi[1] + 20, "w": 100,
+                                                          "h": 40, "cx": 750, "cy": roi[1] + 40, "score": 1.0})
+
+    def test_reads_gold_rows_without_bar_rows(self):
+        rows = self.feature.read_gold_rows(self.img, self.gray)
+        self.assertEqual([(r[0], r[3]) for r in rows], [(472, True), (819, False)])
+
+    def test_bought_only_with_the_option_and_verified_by_the_cost_text(self):
+        f = self.feature
+        f.read_upgrade_rows = Mock(return_value=[])
+        f._open_page = Mock(return_value=(self.img, self.gray))
+        f.list_pages = lambda img, gray, gen: iter([(img, gray, 0)])
+        f._fresh = Mock(return_value=(self.img, self.gray))
+        self.assertEqual(f.buy_upgrades(f._run_generation), 0)    # default off: gold untouched
+        f.tap.assert_not_called()
+        self.settings.SMART_CRAFT_BUY_GOLD_UPGRADES = True
+        after = self.gray.copy()
+        after[480:520, 391:671] = 200                               # cost text changed after the tap
+        bought_img = np.zeros_like(self.img)                        # no lit Buy any more
+        f._fresh = Mock(return_value=(bought_img, after))
+        self.assertEqual(f.buy_upgrades(f._run_generation), 1)
+        self.assertEqual(f.tap.call_count, 1)
+        self.assertEqual(self.state.smart_craft_upgrades_bought, 1)
+
+    def test_unchanged_row_after_tap_stops_buying(self):
+        f = self.feature
+        self.settings.SMART_CRAFT_BUY_GOLD_UPGRADES = True
+        f.read_upgrade_rows = Mock(return_value=[])
+        f._open_page = Mock(return_value=(self.img, self.gray))
+        f.list_pages = lambda img, gray, gen: iter([(img, gray, 0)])
+        f._fresh = Mock(return_value=(self.img, self.gray))         # same frame: no effect
+        self.assertEqual(f.buy_upgrades(f._run_generation), 0)
+        self.assertEqual(f.tap.call_count, 1)
 
 
 class LockTests(SmartCraftBase):
