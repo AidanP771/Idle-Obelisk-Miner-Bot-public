@@ -12,7 +12,7 @@ Local, unversioned changes (`config/user_workflows.json`,
 
 ## 2026-11-24
 
-### Floor Auto restored after floor trips; bombs, drones and menus (this entry's commit)
+### Floor Auto restored after floor trips; bombs, drones and menus (`9f734b3`)
 - Problem: floor auto-descend was off. Every Smart Craft floor trip since at
   least 08:00 moved 19 -> 11 and straight back (6-7 s) with "floor Auto toggle
   not recognised": the off state is dark maroon, the reader only knew bright
