@@ -530,6 +530,29 @@ def _buy_gold_rows(img, gray, generation, bought, limit):
     return img, gray, bought, False
 
 
+_DEBUG_KEEP = 40  # newest files kept in temp/smart_craft_debug
+
+
+def _debug_dump(reason, **images):
+    """Best effort: save frames of a recognition failure to
+    temp/smart_craft_debug/<time>_<reason>_<name>.png for offline analysis."""
+    base = getattr(s, "BASE_DIR", None)
+    if base is None:
+        return
+    try:
+        folder = Path(base) / "temp" / "smart_craft_debug"
+        folder.mkdir(parents=True, exist_ok=True)
+        stamp = time.strftime("%Y%m%d_%H%M%S")
+        for name, img in images.items():
+            if img is not None:
+                cv2.imwrite(str(folder / f"{stamp}_{reason}_{name}.png"), img)
+        files = sorted(folder.glob("*.png"), key=lambda f: f.stat().st_mtime)
+        for old in files[:-_DEBUG_KEEP]:
+            old.unlink(missing_ok=True)
+    except Exception as exc:  # never let diagnostics break a cycle
+        _log(f"[SMART_CRAFT] debug dump failed: {exc}")
+
+
 def _list_roi():
     return tuple(getattr(s, "SMART_CRAFT_LIST_ROI", (40, 170, 860, 1395)))
 
@@ -590,10 +613,12 @@ def list_pages(img, gray, generation):
         _scroll_list("up")
         new_img, new_gray = _fresh()
         shift = list_shift(gray, new_gray, content_up=True)
-        img, gray = new_img, new_gray
         if shift is None:
-            _log("[SMART_CRAFT] list position unknown after scrolling -> stopping here")
+            _log("[SMART_CRAFT] list position unknown after scrolling -> stopping here "
+                 "(frames in temp/smart_craft_debug)")
+            _debug_dump("list_shift", before=gray, after=new_gray)
             return
+        img, gray = new_img, new_gray
         if shift < 15:
             return
         offset += shift
@@ -663,6 +688,7 @@ def read_workshop_rows(img, gray):
             if have is None or need is None or need <= 0:
                 costs = None
                 _log(f"[SMART_CRAFT] Workshop {bar} cost at y={y} unreadable -> row skipped")
+                _debug_dump(f"workshop_{bar}_{x}_{y}", frame=gray)
                 break
             costs.append((bar, have, need))
         if not costs:

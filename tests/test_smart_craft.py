@@ -112,6 +112,38 @@ class ReadingTests(SmartCraftBase):
         self.assertEqual(self.feature.compute_shortfalls(rows), {"adamant": (0, 43)})
 
 
+class RealCropTests(SmartCraftBase):
+    """Crops from a live Workshop frame (2026-11-24) that were unreadable before
+    the third '4' variant (digits/4_3.png): the third cost column renders the
+    '4' one sub-pixel shifted."""
+    def test_third_column_workshop_costs_are_read(self):
+        import cv2
+        for name, expected in (("workshop_have_14", 14), ("workshop_have_74", 74)):
+            crop = cv2.imread(str(ROOT / f"tests/data/smart_craft/{name}.png"), cv2.IMREAD_GRAYSCALE)
+            self.assertIsNotNone(crop, name)
+            h, w = crop.shape
+            text = self.feature.read_text(crop, (0, 0, w, h))
+            # As in read_workshop_rows: the '/' may touch the crop edge and be dropped.
+            self.assertEqual(self.feature.parse_int((text or "").rstrip("/")), expected, (name, text))
+
+
+class DebugDumpTests(SmartCraftBase):
+    def test_dump_writes_frames_and_keeps_only_the_newest(self):
+        import tempfile
+        from pathlib import Path
+        f = self.feature
+        f._debug_dump("x", frame=np.zeros((4, 4), np.uint8))       # no BASE_DIR: nothing, no error
+        with tempfile.TemporaryDirectory() as tmp:
+            self.settings.BASE_DIR = Path(tmp)
+            f._DEBUG_KEEP = 3
+            f.time = __import__("time")
+            for i in range(5):
+                f._debug_dump(f"r{i}", before=np.zeros((4, 4), np.uint8), after=None)
+            files = list((Path(tmp) / "temp" / "smart_craft_debug").glob("*.png"))
+            self.assertEqual(len(files), 3)
+            self.assertTrue(all("_before" in p.name for p in files))
+
+
 class ListShiftTests(SmartCraftBase):
     def setUp(self):
         super().setUp()

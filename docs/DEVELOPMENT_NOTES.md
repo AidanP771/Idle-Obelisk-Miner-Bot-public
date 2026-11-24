@@ -57,6 +57,7 @@ Measured at 900 x 1600, English UI. Coordinates are full-resolution pixels.
 - Each Upgrades row costs either bars or gold (coin icon, e.g. Pickaxe Crit Damage 0/60, Free Bomb Chance 0/80); no row with both was seen on 30 saved rows (2026-11-24). Gold rows have the same Buy button (bright red = affordable).
 
 ### Workshop (Permanent -> Workshop)
+- The third cost column renders digits one sub-pixel shifted; its '4' matched no reference clearly, so every third-column cost with a 4 (amethyst/runite/citrine "14/", "74/") was unreadable and the row skipped (248 times in one log, 2026-11-24). Added `digits/4_3.png` from a live frame; on 239 saved frames only the failing frame's reads changed (both rows now read). Regression crops: `tests/data/smart_craft/`.
 - Header "Spend Bars on Permanent Upgrades!"; rows cost up to three bar types,
   each shown as an icon with `have/` on one line and `need` below (grey text).
 - Rows seen 2026-11-23: Basic & Chain Damage (Mithril 85, Adamant 68, Runite 51),
@@ -195,7 +196,7 @@ Pitfalls:
 
 - Unit tests: `.venv/Scripts/python.exe -B -m unittest discover -s tests -v`
   and the `node --test` command from `AGENTS.md`. One intermittent error was
-  seen in unrelated tests (again 2026-11-24: `test_gem_statistics` fourteen-days test) and did not reproduce on rerun.
+  seen in unrelated tests (again 2026-11-24: `test_gem_statistics` fourteen-days test and `test_secret_key` concurrent starts) and did not reproduce on rerun.
 - Offline checks: save frames from a read-only pass (open page, scroll, close)
   and run the feature's readers on them (`read_upgrade_rows`, `read_craft_row`,
   `read_floor_panel`, `read_sell_rows`). This caught the missing Demonite icon.
@@ -214,6 +215,7 @@ Pitfalls:
 
 ## Open Items
 
+- Smart Craft "list position unknown after scrolling" (101 times on 2026-11-24): cause not found yet. The before/after frames are now saved to `temp/smart_craft_debug/` (newest 40); analyse them with `list_shift` offline. Unreadable Workshop costs are dumped there too.
 - Screenshots: `exec_out` capture (2026-11-24) not yet observed in the running bot; check `method=exec_out` and `elapsed=` in `[SCREENSHOT]` lines after a restart.
 - Smart Craft page opening polls for the page (2026-11-24); other taps (craft batches, buys, scrolls, closing) still wait a fixed `SMART_CRAFT_UI_DELAY_S`.
 - `SMART_CRAFT_CRAFT_TARGET = next` (2026-11-24): compare cycle length and purchases per cycle with the old `all` behaviour (2026-11-24 morning: 250-360 s per cycle, 2179 bars for 38 purchases).

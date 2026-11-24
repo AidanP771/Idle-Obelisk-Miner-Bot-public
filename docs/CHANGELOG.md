@@ -12,6 +12,20 @@ Local, unversioned changes (`config/user_workflows.json`,
 
 ## 2026-11-24
 
+### Workshop costs with a '4' readable; misread diagnostics (this entry's commit)
+- Problem: Workshop rows were skipped 248 times ("cost ... unreadable"): the
+  third cost column draws the '4' one sub-pixel shifted, which matched no
+  glyph reference clearly. New reference `images/smart_craft/digits/4_3.png`
+  from a live frame. Offline on 239 saved frames, only the failing frame's
+  reads changed (two Workshop rows now read).
+- Problem: "list position unknown after scrolling" stopped 101 scans early;
+  no saved frames show it. The before/after frames (and frames with an
+  unreadable Workshop cost) are now saved to `temp/smart_craft_debug/`
+  (newest 40, git-ignored) for the next analysis.
+- Verified: 305 Python tests (real-crop regression test fails without the new
+  glyph). Not verified live.
+
+
 ### Faster screenshots with exec-out (`a8837cb`)
 - Each capture used three ADB calls (screencap to the device, pull, rm);
   Smart Craft and workflows take thousands of screenshots per day.
