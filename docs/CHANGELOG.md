@@ -12,7 +12,7 @@ Local, unversioned changes (`config/user_workflows.json`,
 
 ## 2026-11-24
 
-### Smart Craft crafts for the next purchase (this entry's commit)
+### Smart Craft crafts for the next purchase (`8425264`)
 - Problem: each cycle turned all ore into bars (target = sum of every visible
   upgrade's need), switching 1x/5x per bar; cycles held the game 250-360 s and
   crafted 2179 bars for 38 purchases.
