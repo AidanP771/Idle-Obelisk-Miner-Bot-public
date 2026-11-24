@@ -12,7 +12,7 @@ Local, unversioned changes (`config/user_workflows.json`,
 
 ## 2026-11-24
 
-### Smart Craft purchase check by level counter; buy step no longer stops at one row (this entry's commit)
+### Smart Craft purchase check by level counter; buy step no longer stops at one row (`0a6d592`)
 - Bug (user report: affordable upgrades not bought): since 12:51 every buy
   step ended at its first tap, "gold Buy ... had no visible effect -> stop
   buying". The check averaged the cost-text pixels, so one changed digit looked
