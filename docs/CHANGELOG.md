@@ -12,7 +12,7 @@ Local, unversioned changes (`config/user_workflows.json`,
 
 ## 2026-11-24
 
-### Audit phase 3: fewer pauses, fewer screenshots, safe key file (this entry's commit)
+### Audit phase 3: fewer pauses, fewer screenshots, safe key file (`9f0724d`)
 - Smart Craft yield policy: pause at once only for
   `SMART_CRAFT_YIELD_PRIORITY` (`obelisk_fight,auto_prestige,lootbug`); other
   waiting workflows (bombs every 30 s) only after
