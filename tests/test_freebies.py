@@ -256,6 +256,30 @@ class FreebieScheduleTests(unittest.TestCase):
         self.feature.get_screen.assert_not_called()
         self.assertEqual(self.state.freebies_next_check_ts, 0)
 
+    def test_pause_waits_without_lock_and_a_pause_during_the_lock_wait_skips_the_claim(self):
+        self.state.automation_paused = True
+        self.assertEqual(self.run_checks(), [3, 10])
+        self.assertIn("[FREEBIES] automation paused -> waiting", self.messages())
+        self.feature.get_screen.assert_not_called()
+        feature = self.feature
+
+        class PausingLock:
+            def locked(self):
+                return True
+
+            def __enter__(self):
+                feature.state.automation_paused = True   # pause requested while waiting
+
+            def __exit__(self, *args):
+                return False
+
+        self.state.automation_paused = False
+        self.state.ingame_action_lock = PausingLock()
+        self.feature._stop_evt.clear()
+        self.assertEqual(self.run_checks(), [3, 10])
+        self.feature.get_screen.assert_not_called()
+        self.feature.tap.assert_not_called()
+
 
 class FreebieConfigTests(unittest.TestCase):
     def test_legacy_migration_preserves_input_and_explicit_new_values(self):

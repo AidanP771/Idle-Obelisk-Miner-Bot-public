@@ -12,6 +12,19 @@ Local, unversioned changes (`config/user_workflows.json`,
 
 ## 2026-11-24
 
+### Pause after current (this entry's commit)
+- Request: a WebUI option to pause the automation queue after the current
+  automation has finished.
+- New dashboard button **Pause after current** (command
+  `automation_pause_toggle`, runtime flag `state.automation_paused`). All
+  lock-taking features (Workflows, Smart Craft, Lootbug, Freebies, Founders,
+  Notices) check it before taking the action lock; the running action
+  finishes. Queued manual workflow runs wait for Resume. Level detection keeps
+  running. Not persisted.
+- Verified: 294 Python and 27 JS tests (all `tests/*.cjs`; scheduler, every feature, button
+  states). Not verified live (needs a restart).
+
+
 ### Smart Craft: optional gold upgrades (`617e8e0`)
 - Request: an option to enable or disable upgrades that cost gold.
 - In game each upgrade costs either bars or gold; Smart Craft only ever bought

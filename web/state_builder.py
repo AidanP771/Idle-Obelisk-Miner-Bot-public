@@ -92,6 +92,7 @@ def build_state_dict():
                 "next_check_remaining": max(0, int(getattr(state, 'detect_level_next_check_ts', 0.0) - now)),
                 "last_error": getattr(state, 'detect_level_last_error', ""),
             },
+            "automation_paused": bool(getattr(state, 'automation_paused', False)),
             "action_lock": {
                 "locked": bool(getattr(state, 'ingame_action_lock', None) and state.ingame_action_lock.locked()),
             },

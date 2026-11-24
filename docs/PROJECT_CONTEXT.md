@@ -419,6 +419,17 @@ rationale is not documented:
 - Feature workers are daemon threads. Game actions normally coordinate through
   `state.ingame_action_lock`; pure detection does not need this lock. Freebies
   waits for it; Lootbugs and Workflows postpone if it is busy.
+- Global pause ("Pause after current", command `automation_pause_toggle`,
+  runtime flag `state.automation_paused`, not persisted): every feature checks
+  the flag right before it takes `state.ingame_action_lock` for new work and
+  takes its postpone path instead (Workflows: the scheduler starts nothing and
+  keeps queued manual runs; Smart Craft returns `paused`; Lootbug and Founders
+  `busy`; Notices `retry`; Freebies waits and re-checks the flag after it got
+  the lock). Work already holding the lock finishes: nested `call_workflow`,
+  Smart Craft's re-lock after a yield (it stops yielding while paused) and the
+  floor-trip return when Smart Craft is switched off are not gated. The
+  dashboard derives *Pausing…* from `action_lock.locked`. A new feature that
+  takes the action lock must check the flag too.
 - Workflows run serially and normally hold the lock for the full flow, including
   subworkflows. `ignore_action_lock` is an existing intentional exception that
   allows interaction with other features.

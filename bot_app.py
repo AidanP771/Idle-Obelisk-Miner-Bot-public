@@ -104,6 +104,12 @@ def run():
             detect_level_feature.trigger_now()
         elif c == "auto_global":
             workflows_feature.toggle_master()
+        elif c == "automation_pause_toggle":
+            state.automation_paused = not state.automation_paused
+            bot_log("[PAUSE] " + ("automation paused after the current action"
+                                  if state.automation_paused else "automation resumed"))
+            if not state.automation_paused:
+                workflows_feature.wake()
         elif c == "reload_cfg":
             workflows_feature.reload_workflows()
             bot_log("[CMD] reload_cfg: settings require process restart; workflow reload requested")

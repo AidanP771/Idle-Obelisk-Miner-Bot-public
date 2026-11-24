@@ -176,6 +176,9 @@ def _try_run_with_lock() -> str:
         _run_claim_chain()
         return "pending" if state.founders_followup_pending else "ok"
 
+    if getattr(state, "automation_paused", False):
+        _log("[FOUNDERS] automation paused -> postponing", "FOUNDERS_LOG_LEVEL_BUSY")
+        return "busy"
     if not lock.acquire(blocking=False):
         _log("[FOUNDERS] another feature is busy -> postponing",
              "FOUNDERS_LOG_LEVEL_BUSY")

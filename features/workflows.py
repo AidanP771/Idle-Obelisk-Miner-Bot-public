@@ -903,6 +903,10 @@ def _eligible_workflows():
     return out
 
 
+def _automation_paused() -> bool:
+    return bool(getattr(state, "automation_paused", False))
+
+
 def _drain_manual_queue():
     with _manual_lock:
         items = list(_manual_queue)
@@ -916,9 +920,15 @@ def _scheduler_tick():
     _apply_pending_reload()
     if _reload_evt.is_set():
         return  # another reload arrived while the candidate was being loaded
+    if _automation_paused():
+        return  # "pause after current": manual triggers stay queued until resume
     # 1) Manual triggers first (already validated when enqueued).
     manual_items = _drain_manual_queue()
     for index, slug in enumerate(manual_items):
+        if _automation_paused():
+            with _manual_lock:
+                _manual_queue[:0] = manual_items[index:]
+            return
         wf = cfg_wf.WORKFLOWS.get(slug)
         if not wf:
             continue
@@ -956,7 +966,7 @@ def _scheduler_tick():
     due.sort(key=lambda t: t[0])
 
     for _, slug, wf, rt in due:
-        if _cancel_evt.is_set() or not state.workflows_master_enabled:
+        if _cancel_evt.is_set() or not state.workflows_master_enabled or _automation_paused():
             return
         with state.workflows_lock:
             if not rt.get("enabled", False):
@@ -1038,6 +1048,11 @@ def toggle_master() -> bool:
     # When OFF, leave _cancel_evt set briefly so the running step loop sees it.
     # The scheduler clears it on next master-ON.
     return new
+
+
+def wake():
+    """Let the scheduler run its next tick now (e.g. after a resume)."""
+    _wake_evt.set()
 
 
 def retry_waiting_now():

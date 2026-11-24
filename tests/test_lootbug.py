@@ -413,6 +413,14 @@ class LootbugTests(unittest.TestCase):
         self.assertAlmostEqual(sleeps[1], 103.5)
         rng.assert_called_once_with(-15.0, 15.0)
 
+    def test_pause_postpones_without_lock_capture_or_click(self):
+        self.state.automation_paused = True
+        self.feature.is_game_running.return_value = True
+        self.assertEqual(self.feature._try_run_with_lock(), "busy")
+        self.assertFalse(self.state.ingame_action_lock.locked())
+        self.feature.get_screen.assert_not_called()
+        self.feature.tap.assert_not_called()
+
     def test_busy_and_no_game_retries_do_not_randomize(self):
         for result, expected in (("busy", 15.0), ("no_game", 30.0), ("founders_due", 1.0)):
             with self.subTest(result=result):

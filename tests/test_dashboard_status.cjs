@@ -66,3 +66,19 @@ test('status updates retain unchanged value markup and countdown nodes across al
   state.detect_level.armed=false;h.status(state);
   assert.equal(h.elements.get('s-level-next').querySelector('.scan-time').textContent,'Setup');
 });
+
+test('pause button shows pause, pausing while an action runs, then paused/resume',()=>{
+  const elements=new Map();
+  const context=vm.createContext({document:{getElementById(id){
+    if(!elements.has(id)){const classes=new Set();elements.set(id,{textContent:'',
+      classList:{toggle(n,on){on?classes.add(n):classes.delete(n);},contains:n=>classes.has(n)}});}
+    return elements.get(id);}}});
+  vm.runInContext(readFileSync(join(__dirname,'../web/static/js/dashboard-status.js'),'utf8'),context);
+  const btn=()=>elements.get('btn-pause');
+  context.updateButtons({automation_paused:false,action_lock:{locked:true}});
+  assert.match(btn().textContent,/Pause after current/);assert.equal(btn().classList.contains('on'),false);
+  context.updateButtons({automation_paused:true,action_lock:{locked:true}});
+  assert.match(btn().textContent,/Pausing/);assert.equal(btn().classList.contains('on'),true);
+  context.updateButtons({automation_paused:true,action_lock:{locked:false}});
+  assert.match(btn().textContent,/Paused .* Resume/);
+});

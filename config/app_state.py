@@ -27,6 +27,9 @@ workflows_reload_status = "idle"  # idle | pending | applied | error
 workflows_reload_error = ""
 # Master switch for the workflow scheduler ("Auto WF" button).
 workflows_master_enabled = False
+# "Pause after current" (WebUI): no feature takes the action lock for new
+# work while set; whatever holds it finishes. Runtime only, not persisted.
+automation_paused = False
 # Per-WF runtime state, populated dynamically by features/workflows.py.
 # Keyed by WF slug. Each entry:
 #   {"enabled": bool, "next_due_ts": float, "last_run_ts": float,

@@ -455,6 +455,21 @@ class LockTests(SmartCraftBase):
         self.assertEqual(self.feature._try_run_with_lock(), "error")
         self.feature.run_cycle.assert_not_called()
 
+    def test_pause_starts_no_cycle_and_skips_yielding(self):
+        self.feature.run_cycle = Mock(return_value="ok")
+        self.state.automation_paused = True
+        self.assertEqual(self.feature._try_run_with_lock(), "paused")
+        self.feature.run_cycle.assert_not_called()
+        self.assertFalse(self.state.ingame_action_lock.locked())
+        # A cycle already running finishes instead of waiting for paused workflows.
+        import time as _time
+        self.state.workflows_waiting = {"obelisk_fight": _time.time()}
+        self.feature._lock_owned = True
+        try:
+            self.assertFalse(self.feature._yield_point(self.feature._run_generation))
+        finally:
+            self.feature._lock_owned = False
+
     def test_lock_is_released_on_error(self):
         self.feature.run_cycle = Mock(side_effect=RuntimeError("simulated failure"))
         with self.assertRaises(RuntimeError):

@@ -40,6 +40,9 @@ def inspect(image):
 
 def _cycle():
     generation = _generation
+    if getattr(state, "automation_paused", False):
+        state.notices_status = "Paused"
+        return "retry"
     if not state.ingame_action_lock.acquire(blocking=False):
         state.notices_status = "Waiting for another feature"
         return "retry"

@@ -254,14 +254,23 @@ def _worker():
                 _wait_for_next_check(wait, "no_game")
                 continue
 
+            if getattr(state, "automation_paused", False):
+                _log("[FREEBIES] automation paused -> waiting")
+                _wait_for_next_check(min(10.0, interval), "paused")
+                continue
             lock = getattr(state, "ingame_action_lock", None)
             if lock is not None:
                 # Block — freebies cycles are infrequent, waiting is fine.
                 if lock.locked():
                     _log("[FREEBIES] another feature is busy -> waiting for action lock")
                 with lock:
-                    if state.freebies_enabled:
+                    # A pause may have been requested while this thread waited.
+                    paused = getattr(state, "automation_paused", False)
+                    if state.freebies_enabled and not paused:
                         _run_claim_cycle()
+                if paused:
+                    _wait_for_next_check(min(10.0, interval), "paused")
+                    continue
             else:
                 _run_claim_cycle()
             _wait_for_next_check(_check_interval(), "ok")

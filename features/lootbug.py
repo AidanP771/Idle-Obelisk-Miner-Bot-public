@@ -291,6 +291,9 @@ def _try_run_with_lock() -> str:
         _run_scan_cycle()
         return "founders_due" if _founders_due() else "ok"
 
+    if getattr(state, "automation_paused", False):
+        _log("[LOOTBUG] automation paused -> postponing", "LOOTBUG_LOG_LEVEL_BUSY")
+        return "busy"
     if not lock.acquire(blocking=False):
         _log("[LOOTBUG] another feature is busy -> postponing",
              "LOOTBUG_LOG_LEVEL_BUSY")

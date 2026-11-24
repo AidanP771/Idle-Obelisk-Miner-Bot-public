@@ -163,6 +163,13 @@ class FeatureTests(unittest.TestCase):
         self.feature.get_screen.assert_not_called()
         self.feature.tap.assert_not_called()
 
+    def test_pause_postpones_without_lock_capture_or_click(self):
+        self.state.automation_paused = True
+        self.assertEqual(self.feature._try_run_with_lock(), "busy")
+        self.assertFalse(self.state.ingame_action_lock.locked())
+        self.feature.get_screen.assert_not_called()
+        self.feature.tap.assert_not_called()
+
     def test_lock_is_released_on_error(self):
         self.feature.find_template.side_effect = RuntimeError("simulated failure")
         with self.assertRaises(RuntimeError):

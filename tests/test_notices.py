@@ -219,6 +219,14 @@ class WorkerTests(unittest.TestCase):
         self.feature.tap.assert_not_called()
         self.assertEqual(self.state.notices_last_scan_ts, 0)
 
+    def test_pause_takes_no_lock_and_does_not_capture(self):
+        self.state.automation_paused = True
+        self.assertEqual(self.feature._cycle(), "retry")
+        self.assertEqual(self.state.notices_status, "Paused")
+        self.assertFalse(self.state.ingame_action_lock.locked())
+        self.feature.get_cached_screen.assert_not_called()
+        self.feature.tap.assert_not_called()
+
     def test_unchanged_image_is_not_archived_or_clicked_twice(self):
         self.feature.get_screen.return_value = (fixture("level"), 900, 1600)
         self.assertEqual(self.feature._cycle(), "retry")

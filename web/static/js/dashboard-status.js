@@ -193,6 +193,13 @@ function updateButtons(d) {
   setBtn('btn-lootbug',lb.enabled,'\uD83D\uDC1B Lootbug');
   setBtn('btn-founders',(d.founders||{}).enabled,'\uD83D\uDCE6 FOUNDERS BUNDLE');
   setBtn('btn-smart-craft',(d.smart_craft||{}).enabled,'\u2692\uFE0F Smart Craft');
+  setBtn('btn-pause',!!d.automation_paused,pauseLabel(d));
+}
+
+/* "Pause after current": running -> pausing (an action still holds the lock) -> paused. */
+function pauseLabel(d){
+  if(!d.automation_paused) return '\u23F8\uFE0F Pause after current';
+  return (d.action_lock||{}).locked ? '\u23F3 Pausing\u2026 (finishing current)' : '\u25B6\uFE0F Paused \u2013 Resume';
 }
 
 function setBtn(id,isOn,label){const el=document.getElementById(id);if(!el)return;el.textContent=label;el.classList.toggle('on',!!isOn);el.classList.toggle('off',!isOn)}

@@ -38,6 +38,16 @@ combined failure afterward.
 Actual reward verification requires a reliable, agreed visual indicator in the
 game. No additional image search or balance measurement has been introduced.
 
+## Global Pause
+
+**Pause after current** sets `state.automation_paused`. Each feature checks it
+directly before taking the action lock for new work and postpones instead;
+the action that already holds the lock finishes normally, so a pause never
+interrupts a workflow, a Smart Craft cycle or a Lootbug purchase halfway. A
+pause therefore never leaves a menu open by itself. Tests:
+`test_workflow_safety.py` (queue kept, running flow finishes, resume continues)
+and the per-feature pause tests.
+
 ## Configuration Protection
 
 `config/validation.py` validates API input and loaded local settings: object

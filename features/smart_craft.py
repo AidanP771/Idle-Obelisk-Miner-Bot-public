@@ -389,6 +389,8 @@ def _yield_point(generation) -> bool:
     global _lock_owned, _paused
     if not _lock_owned or not getattr(s, "SMART_CRAFT_YIELD", True):
         return False
+    if getattr(state, "automation_paused", False):
+        return False  # paused workflows will not run; finish this cycle instead
     waiting = _waiting_workflows()
     if not waiting:
         return False
@@ -408,7 +410,8 @@ def _yield_point(generation) -> bool:
         time.sleep(0.5)
         _check_cancel(generation)
         elapsed = time.time() - started
-        if _waiting_workflows() and elapsed < _YIELD_MAX_WAIT_S:
+        if (_waiting_workflows() and elapsed < _YIELD_MAX_WAIT_S
+                and not getattr(state, "automation_paused", False)):
             continue
         if state.ingame_action_lock.acquire(blocking=False):
             break
@@ -1398,7 +1401,7 @@ def run_cycle(generation=None) -> str:
 
 
 def _try_run_with_lock() -> str:
-    """Returns: ok | nothing_needed | busy | no_game | error | cancelled."""
+    """Returns: ok | nothing_needed | busy | paused | no_game | error | cancelled."""
     if not _bars or not _glyphs:
         return "error"
     if not is_game_running():
@@ -1406,6 +1409,9 @@ def _try_run_with_lock() -> str:
         return "no_game"
     lock = state.ingame_action_lock
     global _lock_owned, _paused
+    if getattr(state, "automation_paused", False):
+        _log("[SMART_CRAFT] automation paused -> not starting a cycle")
+        return "paused"
     if not lock.acquire(blocking=False):
         _log("[SMART_CRAFT] another feature is busy -> postponing")
         return "busy"
@@ -1453,13 +1459,15 @@ def _worker():
                 _sleep_interruptible(5.0)
                 continue
             result = _try_run_with_lock()
-            if result == "busy":
+            if result == "paused":
+                wait = 5.0
+            elif result == "busy":
                 wait = float(getattr(s, "SMART_CRAFT_BUSY_RETRY_S", 15.0))
             elif result == "no_game":
                 wait = min(30.0, interval)
             else:
                 wait = interval
-            if _trip and result != "busy":
+            if _trip and result not in ("busy", "paused"):
                 wait = min(wait, max(15.0, _trip["until"] - time.time()))
             state.smart_craft_next_check_ts = time.time() + wait if state.smart_craft_enabled else 0.0
             _sleep_interruptible(wait)

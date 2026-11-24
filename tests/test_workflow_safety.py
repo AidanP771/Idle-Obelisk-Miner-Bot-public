@@ -103,6 +103,35 @@ class WorkflowSafetyTests(unittest.TestCase):
         self.assertEqual(rt["last_status"], "ok")
         self.assertNotIn("wf", self.w.state.workflows_waiting)
 
+    def test_pause_runs_nothing_keeps_manual_queue_and_resume_continues(self):
+        self.w.cfg_wf.WORKFLOWS = {"wf": {"steps": [{"type": "tap_xy", "x": 1, "y": 2}],
+                                          "enabled_default": True, "interval_s": 300}}
+        self.w._ensure_runtime_entry("wf", self.w.cfg_wf.WORKFLOWS["wf"])
+        self.w.state.workflows["wf"]["next_due_ts"] = time.time() - 1
+        self.w._manual_queue.append("wf")
+        self.w.state.automation_paused = True
+        self.w._scheduler_tick()
+        self.w.tap.assert_not_called()
+        self.assertEqual(self.w._manual_queue, ["wf"])
+        self.assertNotIn("wf", self.w.state.workflows_waiting)
+        self.w.state.automation_paused = False
+        self.w._scheduler_tick()
+        self.assertEqual(self.w.tap.call_count, 2)                 # the manual and the due auto run
+        self.assertEqual(self.w._manual_queue, [])
+
+    def test_pause_requested_during_a_run_lets_it_finish_but_starts_no_next(self):
+        self.w.cfg_wf.WORKFLOWS = {"a": {"steps": [{"type": "tap_xy", "x": 1, "y": 2}]},
+                                   "b": {"steps": [{"type": "tap_xy", "x": 3, "y": 4}]}}
+        def pause_on_tap(*args, **kwargs):
+            self.w.state.automation_paused = True
+            return True
+        self.w.tap.side_effect = pause_on_tap
+        self.w._manual_queue.extend(["a", "b"])
+        self.w._scheduler_tick()
+        self.assertEqual(self.w.state.workflows["a"]["last_status"], "ok")
+        self.assertEqual(self.w.tap.call_count, 1)
+        self.assertEqual(self.w._manual_queue, ["b"])
+
     def test_master_off_during_last_step_is_cancelled_and_does_not_count(self):
         def turn_off(*args, **kwargs):
             self.w.toggle_master()
