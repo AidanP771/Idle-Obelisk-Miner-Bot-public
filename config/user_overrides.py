@@ -118,7 +118,7 @@ def apply_overrides_to_settings(settings_globals: dict, overrides: dict):
         settings_globals[key] = value
     capture = overrides.get("screenshot_capture", {})
     for key in ("SCREENSHOT_CAPTURE_ATTEMPTS", "SCREENSHOT_RETRY_DELAY_S",
-                "SCREENSHOT_LOG_LEVEL", "SCREENSHOT_LOG_CACHE_HITS"):
+                "SCREENSHOT_LOG_LEVEL", "SCREENSHOT_LOG_CACHE_HITS", "SCREENSHOT_CAPTURE_METHOD"):
         if key in capture:
             settings_globals[key] = capture[key]
     adb = overrides.get("adb", {})

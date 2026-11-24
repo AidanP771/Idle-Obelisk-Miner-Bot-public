@@ -172,6 +172,7 @@ def settings_get():
                 "SCREENSHOT_RETRY_DELAY_S": s.SCREENSHOT_RETRY_DELAY_S,
                 "SCREENSHOT_LOG_LEVEL": s.SCREENSHOT_LOG_LEVEL,
                 "SCREENSHOT_LOG_CACHE_HITS": s.SCREENSHOT_LOG_CACHE_HITS,
+                "SCREENSHOT_CAPTURE_METHOD": s.SCREENSHOT_CAPTURE_METHOD,
             },
             "scroll": {
                 "SCROLL_DEFAULT_AREA": list(s.SCROLL_DEFAULT_AREA),

@@ -88,6 +88,13 @@ Existing `user_settings.json` files work without migration or new entries.
 | `SCREENSHOT_RETRY_DELAY_S` | `0.2` | Delay between attempts; allowed range 0–10 seconds |
 | `SCREENSHOT_LOG_LEVEL` | `TXT` | `TXT`: file; `FULL`: file + WebUI; `UI`: WebUI only |
 | `SCREENSHOT_LOG_CACHE_HITS` | `False` | Additional message when a cached image is successfully reused |
+| `SCREENSHOT_CAPTURE_METHOD` | `exec_out` | `exec_out`: `adb exec-out screencap -p` streams the PNG in one call, no Android file; `pull`: `screencap` to an Android file, `pull`, `rm` (the method before 2026-11-24) |
+
+Measured 2026-11-24 on Bluestacks 900 x 1600 (10 captures each, median):
+`exec_out` 0.22 s, `pull` 0.35 s, raw `exec-out screencap` (no PNG) 0.27 s
+(5.7 MB per frame). After an `exec_out` failure in the capture, staging or
+decode phase, the process uses `pull` until restart; the next attempt is a
+complete new capture, never an old image (`method=` in every log line).
 
 Capture attempts are additional to the existing ADB command attempts.
 ADB still uses a timeout of up to 30 seconds per command; reconnection and
@@ -111,8 +118,9 @@ Example with shortened IDs:
 ```
 
 - `request`: links all attempts belonging to the same request.
-- `capture`: identifies an individual attempt and its Android file path.
-- `phase`: `prepare`, `capture`, `pull`, `decode`, `device_check`, `publish`,
+- `capture`: identifies an individual attempt (and with `pull` its Android file path).
+- `method`: `exec_out` or `pull` for this attempt.
+- `phase`: `prepare`, `capture`, `stage` (exec_out), `pull`, `decode`, `device_check`, `publish`,
   `remote_cleanup`, `local_cleanup`, `cache_read`, `cache_stat`, `viewer_read`
   or `complete`.
 - `adb_attempt` and `adb_reconnect`: show reconnections within a single ADB

@@ -12,6 +12,23 @@ Local, unversioned changes (`config/user_workflows.json`,
 
 ## 2026-11-24
 
+### Faster screenshots with exec-out (this entry's commit)
+- Each capture used three ADB calls (screencap to the device, pull, rm);
+  Smart Craft and workflows take thousands of screenshots per day.
+- New setting `SCREENSHOT_CAPTURE_METHOD` (`exec_out` default, `pull` = old
+  pipeline; WebUI). `exec_out` streams the PNG in one call
+  (`adb(..., binary=True)`); staging file, validation, device binding, atomic
+  publish and the no-stale-fallback rule are unchanged. After an exec-out
+  failure the process switches to `pull`.
+- Benchmark (read-only, 10 each, median): exec_out 0.22 s, pull 0.35 s, raw
+  0.27 s.
+- Verified: 302 Python tests (screen cache: exec-out path, fallback to pull,
+  invalid PNG never replaces the cache; existing tests pinned to `pull`).
+  Not verified in the running bot (needs a restart).
+- The planned "poll until the page is ready" for Smart Craft's fixed UI delay
+  is not done yet (open item).
+
+
 ### Smart Craft crafts for the next purchase (`8425264`)
 - Problem: each cycle turned all ore into bars (target = sum of every visible
   upgrade's need), switching 1x/5x per bar; cycles held the game 250-360 s and

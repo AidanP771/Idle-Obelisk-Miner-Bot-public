@@ -195,7 +195,7 @@ Pitfalls:
 
 - Unit tests: `.venv/Scripts/python.exe -B -m unittest discover -s tests -v`
   and the `node --test` command from `AGENTS.md`. One intermittent error was
-  seen twice in unrelated tests and did not reproduce on rerun.
+  seen in unrelated tests (again 2026-11-24: `test_gem_statistics` fourteen-days test) and did not reproduce on rerun.
 - Offline checks: save frames from a read-only pass (open page, scroll, close)
   and run the feature's readers on them (`read_upgrade_rows`, `read_craft_row`,
   `read_floor_panel`, `read_sell_rows`). This caught the missing Demonite icon.
@@ -214,6 +214,8 @@ Pitfalls:
 
 ## Open Items
 
+- Screenshots: `exec_out` capture (2026-11-24) not yet observed in the running bot; check `method=exec_out` and `elapsed=` in `[SCREENSHOT]` lines after a restart.
+- Smart Craft still waits a fixed `SMART_CRAFT_UI_DELAY_S` (0.8 s) after every navigation tap; polling until the page is ready would save time (not done).
 - `SMART_CRAFT_CRAFT_TARGET = next` (2026-11-24): compare cycle length and purchases per cycle with the old `all` behaviour (2026-11-24 morning: 250-360 s per cycle, 2179 bars for 38 purchases).
 - Floor trips: no trip has run yet (trip start/end now log planned and real duration). Every attempt since at least 2026-11-24 08:00 moved 19 -> 11 and back within 7 s (Auto unreadable) and left Auto off; fixed in code, needs a restart and a live trip.
 - Surplus-ore selling: full sequence not yet run in game.

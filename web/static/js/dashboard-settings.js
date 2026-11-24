@@ -46,6 +46,7 @@ const FIELD_HINTS={
   'WORKFLOWS_LOG_LEVEL_BUSY':'postponed/rejected (lock busy) — FULL | TXT | UI',
   /* screenshot capture/viewer */
   'SCREENSHOT_CAPTURE_ATTEMPTS':'full capture attempts per request (1–5); each uses a new Android filename',
+  'SCREENSHOT_CAPTURE_METHOD':'exec_out | pull. exec_out (default): the PNG is streamed in one ADB call (measured 0.22 s vs 0.35 s); pull: screencap to the device, pull, delete (the old method). After an exec_out failure the bot uses pull until restart',
   'SCREENSHOT_RETRY_DELAY_S':'pause between failed full capture attempts (0–10 sec); ADB reconnect may take longer',
   'SCREENSHOT_LOG_LEVEL':'TXT = file; FULL = file + WebUI; UI = WebUI only',
   'SCREENSHOT_LOG_CACHE_HITS':'verbose cache reuse diagnostics; enable temporarily when investigating problems',

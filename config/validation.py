@@ -183,7 +183,8 @@ SETTINGS = {
     "screenshot_viewer": {"SCREENSHOT_VIEWER_FILES": filenames},
     "screenshot_capture": {"SCREENSHOT_CAPTURE_ATTEMPTS": number(1, 5, integer=True),
         "SCREENSHOT_RETRY_DELAY_S": number(0, 10), "SCREENSHOT_LOG_LEVEL": LOG,
-        "SCREENSHOT_LOG_CACHE_HITS": boolean},
+        "SCREENSHOT_LOG_CACHE_HITS": boolean,
+        "SCREENSHOT_CAPTURE_METHOD": choice("exec_out", "pull")},
     "scroll": _schema(roi="SCROLL_DEFAULT_AREA", LOG="SCROLL_LOG_LEVEL",
         I="SCROLL_EDGE_PADDING_PX"),
 }

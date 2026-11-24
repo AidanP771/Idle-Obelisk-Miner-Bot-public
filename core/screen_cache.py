@@ -154,12 +154,26 @@ def latest_cached_png(filenames):
     return None, None
 
 
+_exec_out_disabled = False  # set after an exec-out failure: use pull for this process
+
+
+def _capture_method() -> str:
+    method = str(getattr(s, "SCREENSHOT_CAPTURE_METHOD", "exec_out"))
+    if method == "exec_out" and _exec_out_disabled:
+        return "pull"
+    return method if method in ("exec_out", "pull") else "exec_out"
+
+
 def capture_screen(local_path: str, slot: str = "manual_scr", color: bool = False):
     """Fresh capture with retries, pinned device and atomic publication.
 
-    Each attempt owns its remote file and local staging file. Failed cleanup
-    does not invalidate a successful capture. No stale fallback is allowed.
+    Each attempt owns its local staging file (and, with the `pull` method, its
+    remote file). `exec_out` streams the PNG in one ADB call; after an
+    exec-out failure the process switches to `pull` (a full new capture, never
+    an old image). Failed cleanup does not invalidate a successful capture.
+    No stale fallback is allowed.
     """
+    global _exec_out_disabled
     _validate_slot(slot)
     path = os.path.abspath(local_path)
     attempts = max(1, min(5, int(getattr(s, "SCREENSHOT_CAPTURE_ATTEMPTS", 2))))
@@ -175,8 +189,9 @@ def capture_screen(local_path: str, slot: str = "manual_scr", color: bool = Fals
             remote_dir = posixpath.dirname(getattr(s, "REMOTE_SCREEN", "/sdcard/__scr.png"))
             remote = posixpath.join(remote_dir, f"__obelisk_{slot}_{capture_id}.png")
             staging = f"{path}.{capture_id}.part"
+            method = _capture_method()
             context = (f"slot={slot} request={request_id} capture={capture_id} "
-                       f"device={device} attempt={attempt}/{attempts}")
+                       f"device={device} attempt={attempt}/{attempts} method={method}")
             phase = "prepare"
             img = None
 
@@ -186,14 +201,22 @@ def capture_screen(local_path: str, slot: str = "manual_scr", color: bool = Fals
             try:
                 os.makedirs(os.path.dirname(path), exist_ok=True)
                 phase = "capture"
-                _log(f"{context} phase=capture begin remote={remote} "
-                     f"thread={threading.current_thread().name}")
-                adb("shell", "screencap", "-p", remote, device=device, log_fn=adb_log)
-                phase = "pull"
-                adb("pull", remote, staging, device=device, log_fn=adb_log)
+                if method == "exec_out":
+                    _log(f"{context} phase=capture begin "
+                         f"thread={threading.current_thread().name}")
+                    data = adb("exec-out", "screencap", "-p", device=device, log_fn=adb_log, binary=True)
+                    phase = "stage"
+                    with open(staging, "wb") as stream:
+                        stream.write(data)
+                else:
+                    _log(f"{context} phase=capture begin remote={remote} "
+                         f"thread={threading.current_thread().name}")
+                    adb("shell", "screencap", "-p", remote, device=device, log_fn=adb_log)
+                    phase = "pull"
+                    adb("pull", remote, staging, device=device, log_fn=adb_log)
+                    with open(staging, "rb") as stream:
+                        data = stream.read()
                 phase = "decode"
-                with open(staging, "rb") as stream:
-                    data = stream.read()
                 img = _decode(data, color)
                 phase = "device_check"
                 if get_active_device() != device:
@@ -209,13 +232,18 @@ def capture_screen(local_path: str, slot: str = "manual_scr", color: bool = Fals
                 img = None
                 _log(f"{context} phase={phase} failed: {type(exc).__name__}: {exc} "
                      f"elapsed={time.monotonic() - started:.3f}s")
+                if method == "exec_out" and phase in ("capture", "stage", "decode"):
+                    _exec_out_disabled = True
+                    _log(f"{context} exec-out capture failed -> using screencap + pull "
+                         "for the rest of this process")
             finally:
-                phase = "remote_cleanup"
-                try:
-                    adb("shell", "rm", "-f", remote, device=device, log_fn=adb_log)
-                except Exception as exc:
-                    _log(f"{context} phase=remote_cleanup remote={remote} failed: "
-                         f"{type(exc).__name__}: {exc}")
+                if method == "pull":
+                    phase = "remote_cleanup"
+                    try:
+                        adb("shell", "rm", "-f", remote, device=device, log_fn=adb_log)
+                    except Exception as exc:
+                        _log(f"{context} phase=remote_cleanup remote={remote} failed: "
+                             f"{type(exc).__name__}: {exc}")
                 try:
                     os.remove(staging)
                 except FileNotFoundError:

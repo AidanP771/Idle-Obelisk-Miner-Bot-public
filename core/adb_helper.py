@@ -156,11 +156,12 @@ def _reconnect_if_needed(error_msg: str) -> bool:
     return ensure_connected()
 
 
-def adb(*args, device: str = None, log_fn=None) -> str:
+def adb(*args, device: str = None, log_fn=None, binary: bool = False):
     """Run ADB with reconnect. Explicit device pins every retry to that serial.
 
     If reconnect selects another emulator, a pinned caller must restart its
     entire transaction instead of continuing its pull/cleanup on that device.
+    binary=True returns stdout as bytes (e.g. `exec-out screencap -p`).
     """
     global _active_device
 
@@ -180,9 +181,12 @@ def adb(*args, device: str = None, log_fn=None) -> str:
                 raise RuntimeError(f"ADB device changed: {device} -> {_active_device}; restart transaction")
             cmd = [ADB, "-s", device if device is not None else _active_device, *args]
             p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                               text=True, timeout=30, creationflags=_CREATE_FLAGS)
+                               text=not binary, timeout=30, creationflags=_CREATE_FLAGS)
             if p.returncode != 0:
-                err = (p.stderr or p.stdout).strip()
+                err = p.stderr or p.stdout
+                if isinstance(err, bytes):
+                    err = err.decode("utf-8", "replace")
+                err = err.strip()
                 if _retry_connection(err, attempt):
                     continue
                 raise RuntimeError(err)

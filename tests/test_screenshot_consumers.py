@@ -227,6 +227,7 @@ class ScreenshotConfigTests(unittest.TestCase):
         settings.SCREENSHOT_RETRY_DELAY_S = 0.2
         settings.SCREENSHOT_LOG_LEVEL = "TXT"
         settings.SCREENSHOT_LOG_CACHE_HITS = False
+        settings.SCREENSHOT_CAPTURE_METHOD = "exec_out"
         (ROOT / "temp").mkdir(exist_ok=True)
         with tempfile.TemporaryDirectory(dir=ROOT / "temp", prefix="screenshot-api-tests-") as folder:
             root = Path(folder)
@@ -242,11 +243,16 @@ class ScreenshotConfigTests(unittest.TestCase):
                 self.assertEqual(response.status_code, 200)
                 options = response.get_json()["screenshot_capture"]
                 self.assertEqual(options, {"SCREENSHOT_CAPTURE_ATTEMPTS": 2, "SCREENSHOT_RETRY_DELAY_S": 0.2,
-                                           "SCREENSHOT_LOG_LEVEL": "TXT", "SCREENSHOT_LOG_CACHE_HITS": False})
+                                           "SCREENSHOT_LOG_LEVEL": "TXT", "SCREENSHOT_LOG_CACHE_HITS": False,
+                                           "SCREENSHOT_CAPTURE_METHOD": "exec_out"})
                 options["SCREENSHOT_CAPTURE_ATTEMPTS"] = 3
                 self.assertEqual(client.post("/api/config/settings", json={"screenshot_capture": options}).status_code, 200)
                 original = path.read_bytes()
                 options["SCREENSHOT_CAPTURE_ATTEMPTS"] = 0
+                self.assertEqual(client.post("/api/config/settings", json={"screenshot_capture": options}).status_code, 400)
+                self.assertEqual(path.read_bytes(), original)
+                options["SCREENSHOT_CAPTURE_ATTEMPTS"] = 3
+                options["SCREENSHOT_CAPTURE_METHOD"] = "ftp"
                 self.assertEqual(client.post("/api/config/settings", json={"screenshot_capture": options}).status_code, 400)
                 self.assertEqual(path.read_bytes(), original)
 

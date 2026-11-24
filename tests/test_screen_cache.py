@@ -52,6 +52,7 @@ class CaptureTests(unittest.TestCase):
         self.settings.SCREENSHOT_RETRY_DELAY_S = 0
         self.settings.SCREENSHOT_LOG_LEVEL = "TXT"
         self.settings.SCREENSHOT_LOG_CACHE_HITS = False
+        self.settings.SCREENSHOT_CAPTURE_METHOD = "pull"   # these tests cover the pull pipeline
         self.device = "emulator-A"
         self.remote = {}
         self.guard = threading.Lock()
@@ -72,7 +73,12 @@ class CaptureTests(unittest.TestCase):
             self.cache = load("screen_cache_under_test", "core/screen_cache.py")
         self.adb = adb_stub.adb
 
-    def fake_adb(self, *args, device=None, log_fn=None):
+    def fake_adb(self, *args, device=None, log_fn=None, binary=False):
+        if args == ("exec-out", "screencap", "-p"):
+            self.assertTrue(binary)
+            if self.capture_hook:
+                self.capture_hook(args, device)
+            return self.payload
         if args[:3] == ("shell", "screencap", "-p"):
             with self.guard:
                 self.remote[(device, args[3])] = self.payload
@@ -92,6 +98,39 @@ class CaptureTests(unittest.TestCase):
         else:
             raise AssertionError((args, device))
         return ""
+
+    def test_exec_out_capture_is_one_call_without_remote_file(self):
+        self.settings.SCREENSHOT_CAPTURE_METHOD = "exec_out"
+        gray, w, h = self.cache.get_screen("game_scr", force=True)
+        self.assertEqual((w, h), (12, 8))
+        self.assertEqual([c.args for c in self.adb.call_args_list], [("exec-out", "screencap", "-p")])
+        self.assertEqual(Path(self.cache.screen_path("game_scr")).read_bytes(), self.payload)
+        self.assertFalse(list(Path(self.folder.name).rglob("*.part")))
+        self.assertIn("method=exec_out", self.messages())
+
+    def test_exec_out_failure_retries_with_pull_and_stays_on_pull(self):
+        self.settings.SCREENSHOT_CAPTURE_METHOD = "exec_out"
+        def fail_exec_out(args, device):
+            if args[0] == "exec-out":
+                raise RuntimeError("exec-out unsupported")
+        self.capture_hook = fail_exec_out
+        gray, w, h = self.cache.get_screen("game_scr", force=True)
+        self.assertEqual((w, h), (12, 8))                      # attempt 2 used pull: a new capture
+        kinds = [c.args[0] if c.args[0] != "shell" else c.args[1] for c in self.adb.call_args_list]
+        self.assertEqual(kinds, ["exec-out", "screencap", "pull", "rm"])
+        self.assertIn("using screencap + pull", self.messages())
+        self.adb.reset_mock()
+        self.cache.get_screen("game_scr", force=True)
+        self.assertEqual(self.adb.call_args_list[0].args[:2], ("shell", "screencap"))
+
+    def test_invalid_exec_out_png_never_replaces_the_cache(self):
+        self.settings.SCREENSHOT_CAPTURE_METHOD = "exec_out"
+        self.settings.SCREENSHOT_CAPTURE_ATTEMPTS = 1
+        old = self.write_cache("game_scr", age=100)
+        self.payload = b"not a png"
+        img, w, h = self.cache.get_screen("game_scr", force=True)
+        self.assertIsNone(img)
+        self.assertEqual(old.read_bytes(), png())
 
     def write_cache(self, slot, data=None, age=0):
         path = Path(self.cache.screen_path(slot))

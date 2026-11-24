@@ -57,6 +57,7 @@ LOCAL_SCREEN = str(TEMP_DIR / "__scr.png")
 
 # ========= Screenshot capture (all features, full-device PNGs) =========
 SCREENSHOT_CAPTURE_ATTEMPTS = 2       # complete captures, separate from ADB retries
+SCREENSHOT_CAPTURE_METHOD = "exec_out"  # exec_out: one ADB call (~0.22 s); pull: screencap to sdcard + pull + rm (~0.35 s)
 SCREENSHOT_RETRY_DELAY_S = 0.2
 SCREENSHOT_LOG_LEVEL = "TXT"          # capture results, retries, phase errors
 SCREENSHOT_LOG_CACHE_HITS = False     # verbose diagnostics; enable temporarily
