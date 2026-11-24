@@ -118,7 +118,8 @@ class RealCropTests(SmartCraftBase):
     '4' one sub-pixel shifted."""
     def test_third_column_workshop_costs_are_read(self):
         import cv2
-        for name, expected in (("workshop_have_14", 14), ("workshop_have_74", 74)):
+        for name, expected in (("workshop_have_14", 14), ("workshop_have_74", 74),
+                               ("workshop_have_263", 263), ("workshop_have_39", 39)):   # '3' variant: digits/3_4.png
             crop = cv2.imread(str(ROOT / f"tests/data/smart_craft/{name}.png"), cv2.IMREAD_GRAYSCALE)
             self.assertIsNotNone(crop, name)
             h, w = crop.shape
@@ -318,6 +319,50 @@ class BuyTests(SmartCraftBase):
         self.assertEqual(self.feature.buy_upgrades(self.feature._run_generation), 0)
         self.assertEqual(self.feature.tap.call_count, 1)
         self.assertEqual(self.state.smart_craft_upgrades_bought, 0)
+
+
+class PurchaseCheckTests(SmartCraftBase):
+    def test_level_boxes_on_real_frames(self):
+        import cv2
+        up = cv2.imread(str(ROOT / "tests/data/smart_craft/upgrades_levels.png"), cv2.IMREAD_GRAYSCALE)
+        self.assertEqual([self.feature.read_level(up, y) for y in (398, 745, 1092)], [5, 5, 4])
+        self.assertIsNone(self.feature.read_level(up, 227))           # gold row at level 0: no box
+        ws = cv2.imread(str(ROOT / "tests/data/smart_craft/workshop_end.png"), cv2.IMREAD_GRAYSCALE)
+        self.assertEqual([self.feature.read_level(ws, y) for y in (300, 491, 683)], [2, 0, 0])
+
+    def confirm(self, levels, fallback=lambda i, g: False, before=None):
+        f = self.feature
+        f._fresh = Mock(return_value=(None, None))
+        it = iter(levels)
+        f.read_level = Mock(side_effect=lambda gray, y: next(it))
+        return f._confirm_purchase(400, before, fallback)
+
+    def test_confirmation_rules(self):
+        self.assertTrue(self.confirm([5, 6], before=5)[0])             # level up (after a slow update)
+        ok, _i, _g, how = self.confirm([5] * 5, before=5)
+        self.assertFalse(ok); self.assertEqual(how, "level unchanged")  # no fallback when levels read
+        self.assertTrue(self.confirm([1], before=None)[0])             # box appeared: 0 -> 1
+        self.assertTrue(self.confirm([None], fallback=lambda i, g: True)[0])
+        self.assertFalse(self.confirm([None] * 5)[0])
+        self.assertEqual(self.feature._fresh.call_count, 5)            # bounded polling
+
+    def test_unconfirmed_row_is_skipped_and_the_next_row_is_still_bought(self):
+        f = self.feature
+        f._open_page = Mock(return_value=(None, None))
+        f.list_pages = lambda img, gray, gen: iter([(img, gray, 0)])
+        rows = [("mithril", 50, 40, 400, 750, 400, True), ("adamant", 60, 50, 700, 750, 700, True)]
+        f.read_upgrade_rows = Mock(return_value=rows)                 # both rows stay "affordable"
+        f._fresh = Mock(return_value=(None, None))
+        levels = {400: 3, 700: 7}
+        def level(gray, y):
+            if f.tap.call_count >= 2 and y == 700:
+                return 8                                              # second purchase raised its level
+            return levels[y]
+        f.read_level = Mock(side_effect=level)
+        f._button = Mock(return_value={"found": False})
+        self.assertEqual(f.buy_upgrades(f._run_generation), 1)
+        self.assertEqual(f.tap.call_count, 3)   # row 1 once (skipped), row 2 bought, row 2 again (not confirmed, skipped)
+        self.assertEqual(self.state.smart_craft_upgrades_bought, 1)
 
 
 class CraftPageTests(SmartCraftBase):

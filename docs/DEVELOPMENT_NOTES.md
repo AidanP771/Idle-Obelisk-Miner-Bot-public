@@ -56,10 +56,13 @@ Measured at 900 x 1600, English UI. Coordinates are full-resolution pixels.
 
 - Each Upgrades row costs either bars or gold (coin icon, e.g. Pickaxe Crit Damage 0/60, Free Bomb Chance 0/80); no row with both was seen on 30 saved rows (2026-11-24). Gold rows have the same Buy button (bright red = affordable).
 
+- Level boxes: Upgrades rows show "level/max" (e.g. 5/10, 6/171) above the right end of the row, 82-90 px above the cost icon top, x 690-830; rows at level 0 show no box. Workshop rows always show one (0/1, 2/4), 84-92 px above. Read by the Smart Craft glyph reader (2026-11-24 frames).
+- 2026-11-24 12:51-13:00: every buy step ended at "gold Buy at y=672 had no visible effect -> stop buying" (a lit gold row whose purchase the averaged cost-text check could not see), so no bar upgrade was bought. Fixed: level-box check, polling, skip only that row.
+
 ### Workshop (Permanent -> Workshop)
 - After a prestige (floor 5, 2026-11-24) the Craft page has no rows for adamant/amethyst/citrine/runite/topaz (inferred: their searches failed while mithril's row was read); each search cost 9-14 s per round until such bars were remembered as not craftable for 5 min (30 min at first; the user: new ores unlock often).
 - "Unlock At" rows: `unlock_at.png` scores 0.857-1.0 on locked rows; the label "Bomb Of Plenty Unlocked" scores 0.79, hence the extra rule "below every Buy button".
-- The third cost column renders digits one sub-pixel shifted; its '4' matched no reference clearly, so every third-column cost with a 4 (amethyst/runite/citrine "14/", "74/") was unreadable and the row skipped (248 times in one log, 2026-11-24). Added `digits/4_3.png` from a live frame; on 239 saved frames only the failing frame's reads changed (both rows now read). Regression crops: `tests/data/smart_craft/`.
+- The third cost column renders digits one sub-pixel shifted; its '4' (and, 2026-11-24 13:00, its '3': `digits/3_4.png`, "263/", "39/") matched no reference clearly, so every third-column cost with a 4 (amethyst/runite/citrine "14/", "74/") was unreadable and the row skipped (248 times in one log, 2026-11-24). Added `digits/4_3.png` from a live frame; on 239 saved frames only the failing frame's reads changed (both rows now read). Regression crops: `tests/data/smart_craft/`.
 - Header "Spend Bars on Permanent Upgrades!"; rows cost up to three bar types,
   each shown as an icon with `have/` on one line and `need` below (grey text).
 - Rows seen 2026-11-23: Basic & Chain Damage (Mithril 85, Adamant 68, Runite 51),
@@ -196,6 +199,7 @@ Pitfalls:
 - An aborted workflow leaves its menu open; every later HUD-based workflow then silently matches nothing (2026-11-24: the Drones menu stayed open after each failed prestige until Smart Craft closed it). Close the menu before a deliberate abort, and let a frequent workflow close leftover menus first.
 - A deliberate abort without nested `if`: an optional click, then `if last_step_failed` -> close menu + a non-optional click on the same missing template.
 - Before `reload_cfg`, validate an edited `user_workflows.json` with `config.config_workflows.load_workflow_definitions()` (it rejected nested `if` blocks that the JSON itself allowed) and dry-run it through the engine with mocked screens (see Verification Methods).
+- Offline scripts that call Smart Craft readers with the real settings must disable `_debug_dump` (`sc._debug_dump = lambda *a, **k: None`); otherwise they write into `temp/smart_craft_debug/` and rotate the real dumps out (happened 2026-11-24 13:13).
 - Workflow matching is grayscale; a step cannot tell a green toggle from a red one (a 1x/5x button matched both states at 0.95+).
 
 ## Verification Methods

@@ -12,6 +12,24 @@ Local, unversioned changes (`config/user_workflows.json`,
 
 ## 2026-11-24
 
+### Smart Craft purchase check by level counter; buy step no longer stops at one row (this entry's commit)
+- Bug (user report: affordable upgrades not bought): since 12:51 every buy
+  step ended at its first tap, "gold Buy ... had no visible effect -> stop
+  buying". The check averaged the cost-text pixels, so one changed digit looked
+  like no change, and any unconfirmed tap ended the whole buy step.
+- Purchases are now confirmed by the row's level box (`read_level`: level up,
+  or the box appears 0 -> 1), polling fresh frames every 0.3 s (up to 5)
+  instead of one frame after 0.8 s. Without a readable level the row check
+  decides (gold: Buy no longer lit or >1% of the cost pixels clearly changed).
+  An unconfirmed row is skipped for that page; the other rows are still bought
+  (Upgrades bar rows, gold rows and Workshop rows).
+- Workshop "3" in the third cost column: new glyph `digits/3_4.png` (amethyst
+  "263/", topaz "39/" were unreadable); no read changed on 239 saved frames.
+- Verified: 325 Python and 27 JS tests (real-frame level reads 5/5/4 and
+  2/0/0; regression test: an unconfirmed row no longer blocks the next one).
+  Not verified live (needs a restart).
+
+
 ### Drone point check, floor Auto guard, 5 min skip (`4e7ac55`)
 - Bars without a Craft row are skipped for 5 min instead of 30 (user: new
   ores unlock often).

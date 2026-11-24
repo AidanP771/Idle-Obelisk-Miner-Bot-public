@@ -214,6 +214,16 @@ lazy imports to avoid circular imports. Level detection writes
   to `SMART_CRAFT_MAX_BUYS`. Buying raises the next level's cost, so the
   read -> craft -> buy round repeats while purchases happen, up to
   `SMART_CRAFT_MAX_ROUNDS` (default 3); then the menu is closed. Bars are never sold.
+  Purchase check (2026-11-24): before a Buy tap the row's level box ("5/10"
+  above the right end of the row, `read_level`, x 690-830, about 86 px above
+  the cost icon) is read; after the tap fresh frames are checked every 0.3 s
+  (up to 5). A purchase counts when the level went up or the box appeared
+  (level 0 rows on the Upgrades page have no box). Without a readable level
+  the row check decides (bar/Workshop: the same affordable have/need row is
+  gone; gold: Buy no longer lit or more than 1% of the cost-text pixels changed
+  clearly). An unconfirmed row is skipped for the rest of that page; the
+  other rows are still bought (before, one unconfirmed tap ended the whole
+  buy step).
   Gold (`SMART_CRAFT_BUY_GOLD_UPGRADES`, default off): in game an upgrade costs
   either bars or gold. Off, no row with a gold cost is read or bought, so gold
   stays for drone points. On, after the bar rows of each list page, every

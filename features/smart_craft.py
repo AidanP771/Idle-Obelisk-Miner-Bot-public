@@ -521,31 +521,83 @@ def read_gold_rows(img, gray):
 
 
 def _gold_row_unchanged(before, after):
-    """True if `after` still shows `before`'s row affordable with the same cost text."""
+    """True if `after` still shows `before`'s row affordable with the same cost
+    text. "Same" means almost no pixel changed clearly: a single changed digit
+    (60 -> 66) changes few pixels, which an average over the crop missed."""
     y, _bx, _by, _aff, crop = before
     for ay, _abx, _aby, affordable, acrop in after:
         if abs(ay - y) < 5 and affordable and acrop.shape == crop.shape:
-            return float(np.abs(acrop - crop).mean()) < 6.0
+            changed = (np.abs(acrop - crop) > 40).mean()
+            return float(changed) < 0.01
     return False
 
 
+# Level box ("5/10") above the right end of an Upgrades/Workshop row, relative to
+# the row's cost icon top. Rows at level 0 have no box on the Upgrades page.
+_LEVEL_X = (690, 830)
+_LEVEL_DYS = (-88, -86, -84, -90)   # measured 2026-11-24: Upgrades -90..-82, Workshop -92..-84
+_CONFIRM_POLLS = 5
+_CONFIRM_STEP_S = 0.3
+
+
+def read_level(gray, y):
+    """Current level of the row whose cost icon top is at y, or None when no
+    level box is readable (level 0, or the box is cut off at the list top)."""
+    if gray is None:
+        return None
+    for dy in _LEVEL_DYS:
+        top = y + dy
+        if top < 0:
+            continue
+        text = read_text(gray, (_LEVEL_X[0], top, _LEVEL_X[1], top + 34))
+        cost = parse_cost(text) if text and "/" in text else None
+        if cost is not None:
+            return cost[0]
+    return None
+
+
+def _confirm_purchase(y, level_before, fallback_changed):
+    """After a Buy tap: poll fresh frames (up to _CONFIRM_POLLS x _CONFIRM_STEP_S).
+    Confirmed when the row's level went up or its level box appeared (0 -> 1).
+    Without a readable level (before or after) fallback_changed(img, gray)
+    decides. Returns (confirmed, img, gray, how)."""
+    img = gray = None
+    for _poll in range(_CONFIRM_POLLS):
+        time.sleep(_CONFIRM_STEP_S)
+        img, gray = _fresh()
+        after = read_level(gray, y)
+        if after is not None and (level_before is None or after > level_before):
+            return True, img, gray, f"level {level_before if level_before is not None else 0} -> {after}"
+        if after is not None and level_before is not None:
+            continue  # level readable but unchanged yet: the game may still update
+        if fallback_changed(img, gray):
+            return True, img, gray, "row changed"
+    return False, img, gray, "level unchanged" if level_before is not None else "no change seen"
+
+
 def _buy_gold_rows(img, gray, generation, bought, limit):
-    """Buy affordable gold-cost rows on this page; returns (img, gray, bought, stop)."""
+    """Buy affordable gold-cost rows on this page; returns (img, gray, bought, stop).
+    A row whose purchase is not confirmed is skipped for this page; the other
+    rows are still bought (stop is kept for the caller's interface, always False)."""
+    skipped = []
     while bought < limit:
         _check_cancel(generation)
-        targets = [r for r in read_gold_rows(img, gray) if r[3]]
+        targets = [r for r in read_gold_rows(img, gray)
+                   if r[3] and not any(abs(r[0] - y) < 5 for y in skipped)]
         if not targets:
             return img, gray, bought, False
         row = targets[0]
+        level = read_level(gray, row[0])
         _tap(row[1], row[2], f"Buy (gold) at y={row[0]}")
-        _delay()
-        img, gray = _fresh()
-        if _gold_row_unchanged(row, read_gold_rows(img, gray)):
-            _log(f"[SMART_CRAFT] gold Buy at y={row[0]} had no visible effect -> stop buying")
-            return img, gray, bought, True
+        ok, img, gray, how = _confirm_purchase(
+            row[0], level, lambda i, g: not _gold_row_unchanged(row, read_gold_rows(i, g)))
+        if not ok:
+            skipped.append(row[0])
+            _log(f"[SMART_CRAFT] gold Buy at y={row[0]} not confirmed ({how}) -> skipping this row")
+            continue
         bought += 1
         state.smart_craft_upgrades_bought += 1
-        _log(f"[SMART_CRAFT] bought gold upgrade at y={row[0]}")
+        _log(f"[SMART_CRAFT] bought gold upgrade at y={row[0]} ({how})")
     return img, gray, bought, False
 
 
@@ -768,24 +820,28 @@ def buy_workshop(generation):
     limit = int(getattr(s, "SMART_CRAFT_MAX_BUYS", 20))
     bought = 0
     for img, gray, _offset in list_pages(img, gray, generation):
+        skipped = []
         while bought < limit:
             _check_cancel(generation)
             targets = [r for r in read_workshop_rows(img, gray)
-                       if r["affordable"] and all(h >= n for _b, h, n in r["costs"])]
+                       if r["affordable"] and all(h >= n for _b, h, n in r["costs"])
+                       and not any(abs(r["y"] - y) < 5 for y in skipped)]
             if not targets:
                 break
             row = targets[0]
             summary = ", ".join(f"{b} {h}/{n}" for b, h, n in row["costs"])
+            level = read_level(gray, row["y"])
             _tap(*row["buy"], f"Workshop Buy ({summary})")
-            _delay()
-            img, gray = _fresh()
-            if any(r["costs"] == row["costs"] and abs(r["y"] - row["y"]) < 5 and r["affordable"]
-                   for r in read_workshop_rows(img, gray)):
-                _log(f"[SMART_CRAFT] Workshop Buy ({summary}) had no visible effect -> stop buying")
-                return bought
+            ok, img, gray, how = _confirm_purchase(row["y"], level, lambda i, g: not any(
+                r["costs"] == row["costs"] and abs(r["y"] - row["y"]) < 5 and r["affordable"]
+                for r in read_workshop_rows(i, g)))
+            if not ok:
+                skipped.append(row["y"])
+                _log(f"[SMART_CRAFT] Workshop Buy ({summary}) not confirmed ({how}) -> skipping this row")
+                continue
             bought += 1
             state.smart_craft_upgrades_bought += 1
-            _log(f"[SMART_CRAFT] bought Workshop upgrade ({summary})")
+            _log(f"[SMART_CRAFT] bought Workshop upgrade ({summary}; {how})")
         if bought >= limit or not _button(gray, _tpl("buy.png"), _list_roi())["found"]:
             break
     return bought
@@ -1027,28 +1083,28 @@ def buy_upgrades(generation):
     limit = int(getattr(s, "SMART_CRAFT_MAX_BUYS", 20))
     bought = 0
     for img, gray, _offset in list_pages(img, gray, generation):
+        skipped = []
         while bought < limit:
             _check_cancel(generation)
             targets = [r for r in read_upgrade_rows(img, gray, with_buttons=True)
-                       if r[6] and r[1] >= r[2]]
+                       if r[6] and r[1] >= r[2] and not any(abs(r[3] - y) < 5 for y in skipped)]
             if not targets:
                 break
             bar, have, need, y, bx, by, _affordable = targets[0]
+            level = read_level(gray, y)
             _tap(bx, by, f"Buy ({bar} {have}/{need})")
-            _delay()
-            img, gray = _fresh()
-            same = [r for r in read_upgrade_rows(img, gray, with_buttons=True)
-                    if abs(r[3] - y) < 5 and r[:3] == (bar, have, need) and r[6]]
-            if same:
-                _log(f"[SMART_CRAFT] Buy ({bar} {have}/{need}) had no visible effect -> stop buying")
-                return bought
+            ok, img, gray, how = _confirm_purchase(y, level, lambda i, g: not any(
+                abs(r[3] - y) < 5 and r[:3] == (bar, have, need) and r[6]
+                for r in read_upgrade_rows(i, g, with_buttons=True)))
+            if not ok:
+                skipped.append(y)
+                _log(f"[SMART_CRAFT] Buy ({bar} {have}/{need}) not confirmed ({how}) -> skipping this row")
+                continue
             bought += 1
             state.smart_craft_upgrades_bought += 1
-            _log(f"[SMART_CRAFT] bought upgrade at y={y} ({bar} {have}/{need})")
+            _log(f"[SMART_CRAFT] bought upgrade at y={y} ({bar} {have}/{need}; {how})")
         if getattr(s, "SMART_CRAFT_BUY_GOLD_UPGRADES", False) and bought < limit:
-            img, gray, bought, stop = _buy_gold_rows(img, gray, generation, bought, limit)
-            if stop:
-                return bought
+            img, gray, bought, _stop = _buy_gold_rows(img, gray, generation, bought, limit)
         if bought >= limit:
             _log(f"[SMART_CRAFT] purchase limit reached ({limit})")
             break
