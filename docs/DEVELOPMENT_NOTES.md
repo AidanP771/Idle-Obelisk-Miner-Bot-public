@@ -77,6 +77,8 @@ Measured at 900 x 1600, English UI. Coordinates are full-resolution pixels.
   `Lootbug/lootbug_free.png` (ROI 150,780,420,980) and `LOOTBUG_CLOSE_POPUP`
   with `Lootbug/lootbug_popup_close.png`. The paid offer is never tapped.
 
+Timing (2026-11-24): a lootbug could stay on screen for minutes. Scans ran only every 180 s, and when one was seen the feature needed the action lock and retried every 15 s without waiting for it; bombs and Smart Craft kept winning (255 postpones in one log, e.g. 10:33:41-10:35:57). The run itself (bug tap, Free/Buy, X) takes 6-8 s, mostly the fixed waits `LOOTBUG_POST_CLICK_DELAY_S` (2 s) and `LOOTBUG_BUY_RETRY_S` (3 s). Now: scan without the lock every 15 s, wait up to 45 s for the lock when a bug is visible, re-detect on a fresh frame after waiting.
+
 ### Freebies (Store -> Freebie Pack)
 - Claim works with the shipped templates. The shipped `close_menu.png` (white X,
   thick border) scores about 0.71 here, so the shop stayed open after a claim.
@@ -158,7 +160,7 @@ Templates for these workflows are versioned under `images/workflows/obelisk/`,
 `images/workflows/hud/` and `images/workflows/menu/close_menu_tpl.png`. The
 default `pins/close_pin_tpl.png` scores only about 0.65 on this setup.
 
-Local settings (`config/user_settings.json`): `startup_defaults.SMART_CRAFT_ENABLED = true`;
+Local settings (`config/user_settings.json`): `startup_defaults.SMART_CRAFT_ENABLED = true`; `LOOTBUG_CHECK_INTERVAL_S` 15 (was 180, changed 2026-11-24);
 `SMART_CRAFT_INTERVAL_S` 300, floor trips and surplus-ore selling on (set by the
 user); Lootbug Free/close templates with `LOOTBUG_CLOSE_POPUP`;
 `FREEBIES_CLOSE_TEMPLATE = workflows/menu/close_menu_tpl.png`. Defaults in
@@ -181,6 +183,7 @@ Pitfalls:
   before the change. Compare the last `[STARTUP]` log line with the change time.
 - Menu pages keep their scroll position (Prestige, Drones). Scroll to a known
   end before matching or tapping, and prefer templates over fixed coordinates.
+- Features that poll the action lock non-blockingly lose to frequent lock users (lootbug, 2026-11-24). A feature with a time-critical target should detect without the lock and then wait for it (`lock.acquire(timeout=...)`), listing itself in `state.workflows_waiting` so Smart Craft yields.
 - A long lock holder starves time-critical workflows; look for
   `postponed - another feature busy` when timing looks off.
 - An aborted workflow leaves its menu open; every later HUD-based workflow then silently matches nothing (2026-11-24: the Drones menu stayed open after each failed prestige until Smart Craft closed it). Close the menu before a deliberate abort, and let a frequent workflow close leftover menus first.

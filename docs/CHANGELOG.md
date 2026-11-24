@@ -12,6 +12,23 @@ Local, unversioned changes (`config/user_workflows.json`,
 
 ## 2026-11-24
 
+### Lootbug is taken within seconds (this entry's commit)
+- Problem: a lootbug stayed on screen for minutes although the run needs three
+  taps. Scans ran every 180 s; a seen lootbug needed the action lock and only
+  retried every 15 s, losing to bombs and Smart Craft (255 postpones in one
+  log).
+- Lootbug now scans without the action lock (screenshot only) and takes the
+  lock only when a lootbug or an open Buy box is visible. If the lock is busy
+  it waits up to the new `LOOTBUG_LOCK_WAIT_S` (45 s, WebUI), listed in
+  `state.workflows_waiting` so Smart Craft pauses for it, then re-detects on a
+  fresh frame. Default `LOOTBUG_CHECK_INTERVAL_S` 180 -> 15 s. The tap / Buy /
+  close sequence is unchanged (fixed waits not replaced by polling: the saving
+  would be 2-3 s and the existing checks depend on them).
+- Verified: 297 Python tests (40 lootbug: no lock without a lootbug, waiting
+  for and re-detecting after the lock, pause while waiting, zero wait). Not
+  verified live (needs a restart).
+
+
 ### Floor trip timing in the log; drone purchase confirmed live (`8b37138`)
 - Floor trips (request: "the last trip was very short"): no real trip had
   ever run - every attempt returned within 7 s because the Auto toggle was
@@ -140,3 +157,4 @@ Backups of each step are kept in the session scratchpad, not in the repo.
 | 2026-11-24 | `user_workflows.json` | `bomb_rotation_early_game`: close a leftover menu first, then one round per run, interval 30 s (was 5 rounds every 90 s). |
 | 2026-11-24 | `user_workflows.json` | `buy_drone_points`: tap the "Drone Upgrades" top tab; swipe area [80,420,820,1350]; Max/Exchange optional, each followed by `if last_step_failed` -> close menu and abort. |
 | 2026-11-24 | `user_workflows.json` | `buy_drone_points` swipe area [80,420,820,1350] (the default area started the finger on the Drone Suits tab); confirmed live 10:50. |
+| 2026-11-24 | `user_settings.json` | `LOOTBUG_CHECK_INTERVAL_S` 180 -> 15 (scans no longer take the action lock). |

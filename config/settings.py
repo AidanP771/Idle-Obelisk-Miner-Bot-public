@@ -122,9 +122,10 @@ FREEBIES_POST_CLAIM_DELAY_S = 1.0   # wait after claim before searching close bu
 # A "Lootbug" can spawn in-game; clicking it grants a temporary buff or gems.
 # Detect, click and buy using the selection remembered by the game.
 LOOTBUG_ENABLED_DEFAULT = False
-LOOTBUG_CHECK_INTERVAL_S = 180.0       # 3 min between scans
+LOOTBUG_CHECK_INTERVAL_S = 15.0        # between scans; a scan without a lootbug takes no action lock
 LOOTBUG_INTERVAL_VARIANCE_PCT = 15.0   # random +/- percent per regular scan interval
 LOOTBUG_BUSY_RETRY_S = 15.0            # retry sooner if action lock is busy
+LOOTBUG_LOCK_WAIT_S = 45.0             # lootbug visible but lock busy: wait this long for it (0 = postpone at once)
 
 LOOTBUG_TEMPLATE_GLOB = "Lootbug/lootbug_tpl_*.png"   # ANY match within ROI counts
 LOOTBUG_DETECT_ROI = (323, 730, 665, 877)

@@ -112,9 +112,10 @@ const FIELD_HINTS={
   'SMART_CRAFT_TAP_JITTER_PX':'random +/- pixel jitter on Smart Craft taps',
   'SMART_CRAFT_LOG_LEVEL':'FULL | TXT | UI',
   /* lootbug */
-  'LOOTBUG_CHECK_INTERVAL_S':'seconds between lootbug scans',
+  'LOOTBUG_CHECK_INTERVAL_S':'seconds between lootbug scans; a scan only reads a screenshot and takes the game (action lock) only when a lootbug is visible, so short intervals are cheap',
   'LOOTBUG_INTERVAL_VARIANCE_PCT':'random +/- percent of CHECK_INTERVAL per regular scan (0 = fixed interval, range 0-100); next countdown uses the actual scheduled time',
-  'LOOTBUG_BUSY_RETRY_S':'retry delay if another feature is using ingame action lock',
+  'LOOTBUG_BUSY_RETRY_S':'retry delay if the action lock stayed busy for LOOTBUG_LOCK_WAIT_S',
+  'LOOTBUG_LOCK_WAIT_S':'when a lootbug is visible but another feature holds the game, wait this long for it (Smart Craft pauses for a waiting lootbug); afterwards the lootbug is re-detected on a fresh screenshot. 0 = postpone at once (old behaviour)',
   'LOOTBUG_DETECT_ROI':'x1,y1,x2,y2 search area for the lootbug',
   'LOOTBUG_MATCH_THRESHOLD':'0.0-1.0 template match score',
   'LOOTBUG_SCREEN_REUSE_AGE_S':'reuse game_scr.png if younger than this (sec)',
@@ -169,7 +170,7 @@ const FIELD_UNITS={
   'FREEBIES_TAP_JITTER_PX':'px',
   /* lootbug */
   'LOOTBUG_BONUS_TAP_JITTER_PX':'px','LOOTBUG_BUY_RETRY_S':'s','LOOTBUG_FOUNDERS_LOOKAHEAD_S':'s',
-  'LOOTBUG_CHECK_INTERVAL_S':'s','LOOTBUG_BUSY_RETRY_S':'s',
+  'LOOTBUG_CHECK_INTERVAL_S':'s','LOOTBUG_BUSY_RETRY_S':'s','LOOTBUG_LOCK_WAIT_S':'s',
   'LOOTBUG_INTERVAL_VARIANCE_PCT':'%',
   'DETECT_LEVEL_INTERVAL_S':'s','DETECT_LEVEL_CACHE_MAX_AGE_S':'s',
   'DETECT_LEVEL_NMS_MIN_DX_PX':'px',

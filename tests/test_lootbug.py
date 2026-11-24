@@ -421,6 +421,59 @@ class LootbugTests(unittest.TestCase):
         self.feature.get_screen.assert_not_called()
         self.feature.tap.assert_not_called()
 
+    def test_scan_without_lootbug_never_takes_the_lock(self):
+        class SpyLock:
+            def acquire(self, *a, **k):
+                raise AssertionError("lock taken without a lootbug")
+        self.state.ingame_action_lock = SpyLock()
+        self.feature.find_template.return_value = dict(self.miss)
+        self.assertEqual(self.feature._try_run_with_lock(), "ok")
+        self.feature.tap.assert_not_called()
+
+    def test_visible_lootbug_waits_for_the_lock_and_redetects_on_a_fresh_frame(self):
+        import threading
+        self.settings.LOOTBUG_LOCK_WAIT_S = 10.0
+        self.state.workflows_waiting = {}
+        seen_waiting = []
+        lock = self.state.ingame_action_lock
+        lock.acquire()                                   # another feature holds the game
+
+        def release_soon():
+            seen_waiting.append(dict(self.state.workflows_waiting))
+            lock.release()
+        timer = threading.Timer(0.2, release_soon)
+        timer.start()
+        self.feature.find_template.side_effect = [dict(self.hit), dict(self.hit), dict(self.hit), dict(self.miss)]
+        with patch.object(self.feature, "_fresh_own_screen", wraps=self.feature._fresh_own_screen) as fresh:
+            self.assertEqual(self.feature._try_run_with_lock(), "ok")
+        timer.join()
+        self.assertIn("lootbug", seen_waiting[0])        # Smart Craft can see it waiting
+        self.assertNotIn("lootbug", self.state.workflows_waiting)
+        self.assertGreaterEqual(fresh.call_count, 2)     # re-detection + Buy frames
+        self.assertEqual(self.feature.tap.call_count, 2)  # lootbug + Buy
+        self.assertEqual(self.state.lootbug_bonus_count, 1)
+        self.assertFalse(lock.locked())
+
+    def test_zero_lock_wait_postpones_at_once_and_pause_stops_waiting(self):
+        self.feature.find_template.return_value = dict(self.hit)
+        self.settings.LOOTBUG_LOCK_WAIT_S = 0
+        with self.state.ingame_action_lock:
+            self.assertEqual(self.feature._try_run_with_lock(), "busy")
+        self.assertIn("[LOOTBUG] another feature is busy -> postponing",
+                      [c.args[0] for c in self.feature.bot_log.call_args_list])
+        self.settings.LOOTBUG_LOCK_WAIT_S = 10.0
+        self.state.automation_paused = False
+        self.feature._stop_evt.clear()
+        original = self.feature._acquire_when_seen
+
+        def pause_then_acquire(lock):
+            self.state.automation_paused = True          # pause requested while waiting
+            return original(lock)
+        with self.state.ingame_action_lock, \
+                patch.object(self.feature, "_acquire_when_seen", side_effect=pause_then_acquire):
+            self.assertEqual(self.feature._try_run_with_lock(), "busy")
+        self.feature.tap.assert_not_called()
+
     def test_busy_and_no_game_retries_do_not_randomize(self):
         for result, expected in (("busy", 15.0), ("no_game", 30.0), ("founders_due", 1.0)):
             with self.subTest(result=result):

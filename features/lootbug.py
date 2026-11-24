@@ -5,12 +5,16 @@ Periodically checks whether a Lootbug is on screen and taps it.
 Flow:
     1. Wait LOOTBUG_CHECK_INTERVAL_S +/- LOOTBUG_INTERVAL_VARIANCE_PCT between scans.
     2. Skip the tick if the game isn't running.
-    3. Try to acquire the global ingame_action_lock (non-blocking). If another
-       feature is currently performing taps/scrolls, postpone — retry after
-       LOOTBUG_BUSY_RETRY_S.
-    4. Reuse temp/game_scr.png if younger than LOOTBUG_SCREEN_REUSE_AGE_S.
-       Otherwise pull a fresh frame into temp/lootbug_scr.png.
-    5. Match LOOTBUG_TEMPLATE inside LOOTBUG_DETECT_ROI. No hit -> done.
+    3. Reuse temp/game_scr.png if younger than LOOTBUG_SCREEN_REUSE_AGE_S,
+       otherwise pull a fresh frame into temp/lootbug_scr.png, and match
+       LOOTBUG_TEMPLATE inside LOOTBUG_DETECT_ROI without the action lock.
+       Nothing visible -> done (no lock taken).
+    4. A lootbug (or an open Buy box) is visible: take the global
+       ingame_action_lock. If another feature holds it, wait up to
+       LOOTBUG_LOCK_WAIT_S (listed in state.workflows_waiting, so Smart Craft
+       pauses for it) and re-detect on a fresh frame afterwards; still busy ->
+       retry after LOOTBUG_BUSY_RETRY_S.
+    5. With the lock: tap the lootbug / resume the Buy dialog.
     6. Tap the matched lootbug (jitter), wait LOOTBUG_POST_CLICK_DELAY_S,
        then find lootbug_buy_bonus.png inside LOOTBUG_BONUS_BUY_ROI and
        verify dismissal after each tap. Retry up to BUY_MAX_ATTEMPTS,
@@ -22,6 +26,7 @@ The worker runs in its own daemon thread, gated by `state.lootbug_enabled`
 (toggleable via WebUI).
 """
 import glob
+import math
 import os
 import random
 import threading
@@ -230,26 +235,38 @@ def _buy_when_visible(thr: float) -> bool:
     return False
 
 
-def _run_scan_cycle() -> bool:
+def _detect(img):
+    """(lootbug match, Buy-box match or None) on `img`. The Buy box is only
+    checked when no lootbug is visible (an open dialog to resume)."""
+    thr = float(getattr(s, "LOOTBUG_MATCH_THRESHOLD", 0.8))
+    roi = tuple(getattr(s, "LOOTBUG_DETECT_ROI", (253, 650, 463, 952)))
+    m = _find_any_template(img, roi, thr)
+    if m["found"]:
+        return m, None
+    # Recover an open dialog, including one left behind by a Founders yield.
+    # This cached match is only a hint; Buy always uses a fresh capture.
+    buy = find_template(img, s.LOOTBUG_BONUS_BUY_TEMPLATE,
+                        roi=tuple(s.LOOTBUG_BONUS_BUY_ROI), threshold=thr)
+    return m, buy
+
+
+def _run_scan_cycle(img=None, detected=None) -> bool:
     """Open a Lootbug or resume an existing Buy dialog and verify Buy taps.
+    `img`/`detected` reuse a detection made just before the lock was taken.
     Return True for a Lootbug tap or observed Buy dismissal."""
-    img = _get_screen_for_scan()
+    if img is None:
+        img = _get_screen_for_scan()
     if img is None:
         _log("[LOOTBUG] no screenshot -> skipping cycle")
         return False
 
     thr = float(getattr(s, "LOOTBUG_MATCH_THRESHOLD", 0.8))
-    roi = tuple(getattr(s, "LOOTBUG_DETECT_ROI", (253, 650, 463, 952)))
+    m, buy = detected if detected is not None else _detect(img)
 
     # --- Regular lootbug ---
     lootbug_clicked = False
-    m = _find_any_template(img, roi, thr)
     if not m["found"]:
-        # Recover an open dialog, including one left behind by a Founders yield.
-        # This cached match is only a hint; Buy always uses a fresh capture.
-        buy = find_template(img, s.LOOTBUG_BONUS_BUY_TEMPLATE,
-                            roi=tuple(s.LOOTBUG_BONUS_BUY_ROI), threshold=thr)
-        if buy["found"]:
+        if buy is not None and buy["found"]:
             _log("[LOOTBUG] existing Buy box detected -> resuming bounded Buy search",
                  "LOOTBUG_LOG_LEVEL_BONUS")
             _sleep_interruptible(float(s.LOOTBUG_POST_CLICK_DELAY_S))
@@ -273,8 +290,40 @@ def _run_scan_cycle() -> bool:
     return lootbug_clicked
 
 
+def _acquire_when_seen(lock) -> str:
+    """A lootbug is visible: take the action lock, waiting up to
+    LOOTBUG_LOCK_WAIT_S for its holder. While waiting, the lootbug is listed in
+    state.workflows_waiting so Smart Craft pauses for it like for a workflow.
+    Returns "now" (free at once), "waited" or "" (not taken)."""
+    if lock.acquire(blocking=False):
+        return "now"
+    wait_s = float(getattr(s, "LOOTBUG_LOCK_WAIT_S", 45.0))
+    if wait_s <= 0:
+        _log("[LOOTBUG] another feature is busy -> postponing", "LOOTBUG_LOG_LEVEL_BUSY")
+        return ""
+    _log(f"[LOOTBUG] lootbug visible, another feature is busy -> waiting up to {wait_s:.0f}s "
+         "for the action lock", "LOOTBUG_LOG_LEVEL_BUSY")
+    waiting = getattr(state, "workflows_waiting", None)
+    slices = max(1, int(math.ceil(wait_s / 5.0)))
+    try:
+        for _ in range(slices):  # 5 s slices so the waiting entry stays fresh
+            if waiting is not None:
+                waiting["lootbug"] = time.time()
+            if (getattr(state, "automation_paused", False) or not state.lootbug_enabled
+                    or _stop_evt.is_set()):
+                return ""
+            if lock.acquire(timeout=min(5.0, wait_s)):
+                return "waited"
+    finally:
+        if waiting is not None:
+            waiting.pop("lootbug", None)
+    _log("[LOOTBUG] action lock still busy -> postponing", "LOOTBUG_LOG_LEVEL_BUSY")
+    return ""
+
+
 def _try_run_with_lock() -> str:
-    """Acquire the action lock and run a cycle.
+    """Look for a lootbug without the action lock; take the lock (waiting for
+    it if needed) only when one is visible, then run a cycle.
     Returns: "ok" | "busy" | "no_game" | "founders_due"
     """
     if _founders_due():
@@ -294,14 +343,28 @@ def _try_run_with_lock() -> str:
     if getattr(state, "automation_paused", False):
         _log("[LOOTBUG] automation paused -> postponing", "LOOTBUG_LOG_LEVEL_BUSY")
         return "busy"
-    if not lock.acquire(blocking=False):
-        _log("[LOOTBUG] another feature is busy -> postponing",
-             "LOOTBUG_LOG_LEVEL_BUSY")
+    # Detection is read-only: no lock while nothing is there.
+    img = _get_screen_for_scan()
+    if img is None:
+        _log("[LOOTBUG] no screenshot -> skipping cycle")
+        return "ok"
+    detected = _detect(img)
+    m, buy = detected
+    if not m["found"] and not (buy is not None and buy["found"]):
+        thr = float(getattr(s, "LOOTBUG_MATCH_THRESHOLD", 0.8))
+        _log(f"[LOOTBUG] no lootbug present (best_score={m['score']:.3f} thr={thr} tpl={m.get('template')})",
+             "LOOTBUG_LOG_LEVEL_DETECT")
+        return "ok"
+    taken = _acquire_when_seen(lock)
+    if not taken:
         return "busy"
     try:
         if _founders_due():
             return "founders_due"
-        _run_scan_cycle()
+        if taken == "now":
+            _run_scan_cycle(img, detected)   # the frame is at most LOOTBUG_SCREEN_REUSE_AGE_S old
+        else:
+            _run_scan_cycle(_fresh_own_screen())  # waited: the lootbug may have moved or gone
     finally:
         lock.release()
     return "founders_due" if _founders_due() else "ok"

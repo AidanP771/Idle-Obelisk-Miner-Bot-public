@@ -69,7 +69,7 @@ Freebie, Lootbug, Founders, Level and Notices scans have progress bars and count
 | --- | --- |
 | **Workflows** | Master scheduler switch. OFF blocks manual requests, clears queued manual runs and cooperatively cancels a running workflow at execution boundaries. |
 | **Freebies** | Enables or pauses collection and its statistics tracking. |
-| **Lootbug** | Enables or pauses detection and the bounded Buy-box flow. |
+| **Lootbug** | Enables or pauses detection and the bounded Buy-box flow. Scans (every `LOOTBUG_CHECK_INTERVAL_S`, default 15 s) only read a screenshot; the game is taken only when a lootbug is visible, waiting up to `LOOTBUG_LOCK_WAIT_S` (45 s) for another feature to finish (Smart Craft pauses for it). |
 | **FOUNDERS BUNDLE** | Enables or pauses the independent Founders worker. |
 | **Smart Craft** | Enables (and immediately runs) or pauses Smart Craft; switching OFF cancels a running cycle at the next step. |
 | **Notices** | Enables or pauses automatic saving and dismissal. The saved inbox remains available while OFF. |

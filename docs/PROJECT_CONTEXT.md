@@ -418,7 +418,10 @@ rationale is not documented:
   the new controls. Real-game registration of the varied holds is unverified.
 - Feature workers are daemon threads. Game actions normally coordinate through
   `state.ingame_action_lock`; pure detection does not need this lock. Freebies
-  waits for it; Lootbugs and Workflows postpone if it is busy.
+  waits for it; Workflows postpone if it is busy. Lootbug scans without the
+  lock and takes it only when a lootbug is visible, waiting up to
+  `LOOTBUG_LOCK_WAIT_S` (listed in `state.workflows_waiting`, so Smart Craft
+  yields) and re-detecting on a fresh frame after a wait.
 - Global pause ("Pause after current", command `automation_pause_toggle`,
   runtime flag `state.automation_paused`, not persisted): every feature checks
   the flag right before it takes `state.ingame_action_lock` for new work and
