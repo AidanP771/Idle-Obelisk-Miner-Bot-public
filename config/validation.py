@@ -156,6 +156,7 @@ SETTINGS = {
            "SMART_CRAFT_MAX_BUYS": number(1, 200, integer=True),
            "SMART_CRAFT_MAX_ROUNDS": number(1, 20, integer=True),
            "SMART_CRAFT_USE_5X": boolean,
+           "SMART_CRAFT_CRAFT_TARGET": choice("next", "all"),
            "SMART_CRAFT_WORKSHOP": boolean,
            "SMART_CRAFT_YIELD": boolean,
            "SMART_CRAFT_FLOOR_TRIPS": boolean,

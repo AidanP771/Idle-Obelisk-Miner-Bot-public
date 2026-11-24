@@ -712,13 +712,24 @@ def buy_workshop(generation):
     return bought
 
 
-def compute_shortfalls(rows):
-    """rows: [(bar, have, need, y)] -> {bar: (have, target)} for bars still missing."""
+def _craft_target_mode():
+    mode = str(getattr(s, "SMART_CRAFT_CRAFT_TARGET", "next")).lower()
+    return mode if mode in ("next", "all") else "next"
+
+
+def compute_shortfalls(rows, mode=None):
+    """rows: [(bar, have, need, y)] -> {bar: (have, target)} for bars still missing.
+    mode "next" (SMART_CRAFT_CRAFT_TARGET default): target = the cheapest row's
+    need per bar, i.e. enough for the next purchase; the next round crafts for
+    the following one. Mode "all": target = sum of all rows' needs (crafts every
+    bar the visible upgrades will ever need, usually all ore)."""
+    mode = mode or _craft_target_mode()
     result = {}
     for bar in sorted({r[0] for r in rows}):
         mine = [r for r in rows if r[0] == bar]
         have = max(r[1] for r in mine)
-        target = sum(r[2] for r in mine)
+        needs = [r[2] for r in mine]
+        target = min(needs) if mode == "next" else sum(needs)
         if target > have:
             result[bar] = (have, target)
     return result
@@ -806,6 +817,18 @@ def select_quantity_5x():
     return select_quantity("5x")
 
 
+def _one_x_reaches(row, target, per_press):
+    """In "next" mode, switch the Craft page to 1x for leftover ore only if
+    those presses can still reach `target` (each switch costs two taps and
+    several screenshots). Mode "all" always uses the leftover ore."""
+    if _craft_target_mode() == "all":
+        return True
+    ore_per_1x = row["ratio"] / 5           # the shown ratio is for 5x
+    presses = int(row["ore"] // ore_per_1x) if ore_per_1x > 0 else 0
+    bars_per_1x = (per_press / 5) if per_press else 1.0
+    return row["bars"] + presses * bars_per_1x >= target
+
+
 def craft_bar(bar, have, target, generation, quantity=None):
     """Press Craft until `bars >= target`; returns verified bars crafted.
     `have` is the count read on Upgrades and must match the Craft row.
@@ -828,7 +851,10 @@ def craft_bar(bar, have, target, generation, quantity=None):
     while row["bars"] < target and presses < max_presses:
         _check_cancel(generation)
         if row["ore"] < row["ratio"]:
-            if quantity == "5x" and not switched_to_1x:
+            if quantity == "5x" and not switched_to_1x and not _one_x_reaches(row, target, per_press):
+                _log(f"[SMART_CRAFT] {bar}: ore {row['ore']} < {row['ratio']} for 5x and 1x presses "
+                     f"cannot reach {target} -> keeping the ore")
+            elif quantity == "5x" and not switched_to_1x:
                 # The rest of the ore may still cover single crafts.
                 _log(f"[SMART_CRAFT] {bar}: ore {row['ore']} < {row['ratio']} for 5x -> trying 1x")
                 switched_to_1x = True

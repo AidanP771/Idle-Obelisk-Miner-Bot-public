@@ -12,6 +12,20 @@ Local, unversioned changes (`config/user_workflows.json`,
 
 ## 2026-11-24
 
+### Smart Craft crafts for the next purchase (this entry's commit)
+- Problem: each cycle turned all ore into bars (target = sum of every visible
+  upgrade's need), switching 1x/5x per bar; cycles held the game 250-360 s and
+  crafted 2179 bars for 38 purchases.
+- New setting `SMART_CRAFT_CRAFT_TARGET` (`next` default, `all` = old
+  behaviour; WebUI). `next`: per bar the target is the cheapest row's need;
+  the round buys it and the next round crafts for the following one (up to
+  `SMART_CRAFT_MAX_ROUNDS`). Leftover ore is crafted in 1x only if those
+  presses can reach the target. Behaviour change: ore is kept as ore instead
+  of being crafted ahead.
+- Verified: 299 Python tests. Not verified live (needs a restart); watch cycle
+  length and purchases per cycle.
+
+
 ### Lootbug is taken within seconds (`f0e9cea`)
 - Problem: a lootbug stayed on screen for minutes although the run needs three
   taps. Scans ran every 180 s; a seen lootbug needed the action lock and only

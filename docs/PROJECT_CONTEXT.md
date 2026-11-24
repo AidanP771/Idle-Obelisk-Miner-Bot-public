@@ -187,7 +187,10 @@ lazy imports to avoid circular imports. Level detection writes
   throughout: open main menu -> Upgrades, scroll from the top through the
   list and read every row that has a Buy button and a bar cost (bar icon +
   `have/need`), stopping at the locked "Unlock At Level" section. Per bar
-  type the target is the sum of all needs. Rows with two costs (two bars, or
+  type the target depends on `SMART_CRAFT_CRAFT_TARGET`: `next` (default) =
+  the cheapest row's need (enough for the next purchase; the following round
+  crafts for the next one), `all` = the sum of all needs (before 2026-11-24
+  the only mode; it usually turns all ore into bars). Rows with two costs (two bars, or
   bar + gold per the game wiki) are read up to the next cost icon (bar
   templates plus `images/smart_craft/coin.png`). Craft page: switch to 5x
   (`SMART_CRAFT_USE_5X`, `qty_5x.png`; green = active, the game keeps the
@@ -196,7 +199,9 @@ lazy imports to avoid circular imports. Level detection writes
   the presses the shown ore covers) and
   re-read the row after every batch. When the ore no longer covers one 5x
   press, the rest is crafted in 1x (`qty_1x.png`; the switch counts only if the
-  row's ore cost drops) and 5x is selected again afterwards. One batch without
+  row's ore cost drops) and 5x is selected again afterwards; in `next` mode
+  only when those 1x presses can still reach the target, otherwise the ore is
+  kept. One batch without
   progress is retried
   once (the game occasionally drops a press). Then (`SMART_CRAFT_BUY_UPGRADES`) tap
   Buy on each affordable bar-cost row (bright button and `have >= need`), up
@@ -222,8 +227,8 @@ lazy imports to avoid circular imports. Level detection writes
   Workshop (`SMART_CRAFT_WORKSHOP`, default on): each round also opens
   Permanent -> Workshop (`workshop_header.png`) and reads the buyable rows
   (up to three bar costs, "have/" above "need"; icons grouped per row). Their
-  costs join the Upgrades rows, so the crafting target per bar is the sum of
-  both. Buying keeps the user-chosen priority: regular Upgrades first, then
+  costs join the Upgrades rows (in `all` mode the crafting target per bar is
+  the sum of both; in `next` mode the cheapest of them). Buying keeps the user-chosen priority: regular Upgrades first, then
   every Workshop row whose costs are all met and whose Buy button is bright,
   verified on a fresh frame. Workshop upgrades are permanent (survive prestige).
   Surplus ore (`SMART_CRAFT_SELL_SURPLUS_ORE`, default off): only when the

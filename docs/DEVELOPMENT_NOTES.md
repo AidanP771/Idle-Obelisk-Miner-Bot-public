@@ -214,6 +214,7 @@ Pitfalls:
 
 ## Open Items
 
+- `SMART_CRAFT_CRAFT_TARGET = next` (2026-11-24): compare cycle length and purchases per cycle with the old `all` behaviour (2026-11-24 morning: 250-360 s per cycle, 2179 bars for 38 purchases).
 - Floor trips: no trip has run yet (trip start/end now log planned and real duration). Every attempt since at least 2026-11-24 08:00 moved 19 -> 11 and back within 7 s (Auto unreadable) and left Auto off; fixed in code, needs a restart and a live trip.
 - Surplus-ore selling: full sequence not yet run in game.
 - Gold upgrades (`SMART_CRAFT_BUY_GOLD_UPGRADES`, off by default): not yet run live; offline the reader finds the gold rows on four saved frames, all unaffordable (gold 0), so a lit gold Buy button has not been seen yet.

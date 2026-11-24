@@ -101,8 +101,15 @@ class ReadingTests(SmartCraftBase):
     def test_shortfall_sums_needs_and_ignores_covered_bars(self):
         rows = [("adamant", 0, 35, 397), ("adamant", 0, 8, 1300), ("runite", 0, 10, 1650),
                 ("tin", 900, 50, 800)]
-        self.assertEqual(self.feature.compute_shortfalls(rows),
+        self.assertEqual(self.feature.compute_shortfalls(rows, "all"),
                          {"adamant": (0, 43), "runite": (0, 10)})
+
+    def test_next_target_is_the_cheapest_row_per_bar(self):
+        rows = [("adamant", 0, 35, 397), ("adamant", 0, 8, 1300), ("runite", 12, 10, 1650),
+                ("tin", 900, 50, 800)]
+        self.assertEqual(self.feature.compute_shortfalls(rows), {"adamant": (0, 8)})  # default "next"
+        self.settings.SMART_CRAFT_CRAFT_TARGET = "all"
+        self.assertEqual(self.feature.compute_shortfalls(rows), {"adamant": (0, 43)})
 
 
 class ListShiftTests(SmartCraftBase):
@@ -153,6 +160,7 @@ class CraftTests(SmartCraftBase):
 
     def test_leftover_ore_is_crafted_in_1x_then_5x_is_restored(self):
         f = self.feature
+        self.settings.SMART_CRAFT_CRAFT_TARGET = "all"   # all ore is used, even far below the target
         f.select_quantity = Mock(return_value=True)
         rows = iter([self.row(0, ore=18, ratio=40),   # 5x: not enough for one press
                      self.row(0, ore=18, ratio=8),    # 1x confirmed
@@ -165,8 +173,22 @@ class CraftTests(SmartCraftBase):
         self.assertEqual([c.args for c in f.select_quantity.call_args_list], [("1x",), ("5x",)])
         self.assertEqual(f.tap.call_count, 2)  # probe press, then one more
 
+    def test_next_mode_uses_1x_only_when_the_leftover_reaches_the_target(self):
+        f = self.feature
+        f.select_quantity = Mock(return_value=True)
+        f._fresh = Mock(return_value=(None, None))
+        f._locate_craft_row = Mock(return_value=self.row(0, ore=18, ratio=40))   # 2 presses in 1x
+        self.assertEqual(f.craft_bar("adamant", 0, 10, f._run_generation, "5x"), 0)
+        f.select_quantity.assert_not_called()                                    # 2 < 10: keep the ore
+        self.assertIn("adamant", f._ore_missing)
+        rows = iter([self.row(0, ore=18, ratio=8), self.row(1, ore=10, ratio=8), self.row(2, ore=2, ratio=8)])
+        f._read_stable_row = Mock(side_effect=lambda *_a: next(rows))
+        self.assertEqual(f.craft_bar("adamant", 0, 2, f._run_generation, "5x"), 2)  # 2 presses reach 2
+        self.assertEqual([c.args for c in f.select_quantity.call_args_list], [("1x",), ("5x",)])
+
     def test_unconfirmed_1x_switch_stops_without_crafting(self):
         f = self.feature
+        self.settings.SMART_CRAFT_CRAFT_TARGET = "all"
         f.select_quantity = Mock(return_value=True)
         rows = iter([self.row(0, ore=18, ratio=40), self.row(0, ore=18, ratio=40)])
         f._fresh = Mock(return_value=(None, None))
@@ -280,6 +302,7 @@ class RoundTests(SmartCraftBase):
 
     def test_workshop_needs_join_targets_and_are_bought_after_upgrades(self):
         f = self.feature
+        self.settings.SMART_CRAFT_CRAFT_TARGET = "all"   # targets add up across Upgrades and Workshop
         f._floor_step = Mock()
         f.scan_upgrades = Mock(return_value=[("runite", 10, 20, 400)])
         f.scan_workshop = Mock(return_value=[("runite", 10, 350, 600), ("citrine", 0, 300, 600)])
