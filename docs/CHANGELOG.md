@@ -12,6 +12,18 @@ Local, unversioned changes (`config/user_workflows.json`,
 
 ## 2026-11-24
 
+### Floor trip timing in the log; drone purchase confirmed live (`8b37138`)
+- Floor trips (request: "the last trip was very short"): no real trip had
+  ever run - every attempt returned within 7 s because the Auto toggle was
+  unreadable (fixed in `9f734b3`). Trips now log their planned return time and
+  the Auto state at the start, and the real duration at the end
+  (`started` is stored in `smart_craft_trip.json`; older files still load).
+- Drone purchase: confirmed live at 10:50 with the swipe area
+  [80,420,820,1350] - Drone Upgrades tab shown, Max and Exchange hit, prestige
+  done.
+- Verified: 294 Python tests. Floor trips still need a restart and a live trip.
+
+
 ### Pause after current (`1c199b1`)
 - Request: a WebUI option to pause the automation queue after the current
   automation has finished.
@@ -127,3 +139,4 @@ Backups of each step are kept in the session scratchpad, not in the repo.
 | 2026-11-23 | `user_settings.json` | Set by the user: `SMART_CRAFT_FLOOR_TRIPS`, `SMART_CRAFT_SELL_SURPLUS_ORE` on, `SMART_CRAFT_INTERVAL_S` 300. |
 | 2026-11-24 | `user_workflows.json` | `bomb_rotation_early_game`: close a leftover menu first, then one round per run, interval 30 s (was 5 rounds every 90 s). |
 | 2026-11-24 | `user_workflows.json` | `buy_drone_points`: tap the "Drone Upgrades" top tab; swipe area [80,420,820,1350]; Max/Exchange optional, each followed by `if last_step_failed` -> close menu and abort. |
+| 2026-11-24 | `user_workflows.json` | `buy_drone_points` swipe area [80,420,820,1350] (the default area started the finger on the Drone Suits tab); confirmed live 10:50. |

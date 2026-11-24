@@ -124,7 +124,9 @@ Measured at 900 x 1600, English UI. Coordinates are full-resolution pixels.
 - Saving workflows from a WebUI editor that was opened before a file edit overwrites that edit (22:51: an interval change dropped the Prestige scroll step).
 - Wiki (Prestige page): Drone Points are permanent (kept on prestige), as are Relics, Artifacts, Veins, bomb charges, challenge progress and items. The wiki does not say whether drone upgrades bought with Drone Points are kept; unverified.
 - The Drones page has top tabs Drone Upgrades / Drone Suits / Suit Upgrades and remembers the last one; the exchange panel is only on Drone Upgrades (2026-11-24: the page was on Drone Suits and every `buy_drone_points` since 05:00 failed, 30 times).
-- A swipe with the default area (0,102,900,1457) and direction down starts the finger at (450,122), on the Drone Suits tab; the workflow swipe therefore uses area [80,420,820,1350] (inferred cause, live check pending).
+- A swipe with the default area (0,102,900,1457) and direction down starts the finger at (450,122), on the Drone Suits tab; the workflow swipe therefore uses area [80,420,820,1350]. Confirmed live 2026-11-24 10:50: with tab tap and this area the page showed Drone Upgrades, Max (0.91) and Exchange (1.0) were hit and the prestige ran.
+- The Max quantity button stays selected (green) after use; `drone_max_tpl` (cut from the red state) still matches it at 0.91 because workflow matching is grayscale.
+- The exchange costs about 302 gold per drone point at this stage; with less gold (135 at 10:50) Exchange does nothing and the prestige still runs (the workflow cannot see whether points were bought).
 - Drones page "Exchange Gold for Drone Points": quantity buttons 1x/5x/25x/250x/Max at y 250 (Max x 716), exchange button at (450, 352).
 
 ### Bombs
@@ -209,12 +211,12 @@ Pitfalls:
 
 ## Open Items
 
-- Floor trips: no trip has run yet. Every attempt since at least 2026-11-24 08:00 moved 19 -> 11 and back within 7 s (Auto unreadable) and left Auto off; fixed in code, needs a restart and a live trip.
+- Floor trips: no trip has run yet (trip start/end now log planned and real duration). Every attempt since at least 2026-11-24 08:00 moved 19 -> 11 and back within 7 s (Auto unreadable) and left Auto off; fixed in code, needs a restart and a live trip.
 - Surplus-ore selling: full sequence not yet run in game.
 - Gold upgrades (`SMART_CRAFT_BUY_GOLD_UPGRADES`, off by default): not yet run live; offline the reader finds the gold rows on four saved frames, all unaffordable (gold 0), so a lit gold Buy button has not been seen yet.
 - Workshop buying is not yet observed live (bars were 0 after the prestige).
 - `SMART_CRAFT_YIELD` and the Freebies close template: verify after the next restart (`pausing for waiting workflow(s)`, `tap close-menu`).
-- `buy_drone_points`: tab tap plus the swipe area are not yet confirmed live; `drone_max_tpl` was cut from the unselected (red) Max button, the selected state is unknown.
+- `buy_drone_points` cannot tell whether the exchange bought anything (gold below one drone point's price); reading the drone point counter before/after would make that visible.
 - Whether drone upgrades survive prestige: compare before/after the next prestige.
 - `FREEBIES_DIAMONDS_PER_CLAIM` is 28 but this pack gives 5; the pack banks 2 claims and the feature claims one per visit.
 - Skill-Tree (unlocked at Obelisk 4): automation ideas from the wiki discussed, nothing built (user: explore as we go).
