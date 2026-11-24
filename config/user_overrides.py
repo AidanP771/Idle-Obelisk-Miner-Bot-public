@@ -188,6 +188,7 @@ def apply_overrides_to_settings(settings_globals: dict, overrides: dict):
         "FREEBIES_LOG_LEVEL",
         "FREEBIES_LOG_LEVEL_CLAIMED",
         "FREEBIES_CLOSE_ROI",
+        "FREEBIES_CLOSE_TEMPLATE",
         "FREEBIES_POST_CLAIM_DELAY_S",
     )
     for k in _freebies_keys:

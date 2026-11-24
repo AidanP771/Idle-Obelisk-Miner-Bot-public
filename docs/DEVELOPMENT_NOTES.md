@@ -69,6 +69,15 @@ Measured at 900 x 1600, English UI. Coordinates are full-resolution pixels.
   `Lootbug/lootbug_free.png` (ROI 150,780,420,980) and `LOOTBUG_CLOSE_POPUP`
   with `Lootbug/lootbug_popup_close.png`. The paid offer is never tapped.
 
+### Freebies (Store -> Freebie Pack)
+- Claim works with the shipped templates. The shipped `close_menu.png` (white X,
+  thick border) scores about 0.71 here, so the shop stayed open after a claim.
+  `FREEBIES_CLOSE_TEMPLATE` is now configurable; local setting
+  `workflows/menu/close_menu_tpl.png` (1.0 on the shop screen).
+- The pack showed 5 gems (gems 372 -> 377), while `FREEBIES_DIAMONDS_PER_CLAIM`
+  is 28, so gem statistics overstate. The pack banks up to 2 claims; the
+  feature claims one per cycle.
+
 ### Sell page
 - A row's own **Sell** button sells **one** ore per tap.
 - **Sell All** sells every unlocked row; first tap arms it (orange), second tap sells.

@@ -68,7 +68,8 @@ const FIELD_HINTS={
   'FREEBIES_DIAMONDS_PER_CLAIM':'estimated gems per claim tap; used by statistics',
   'FREEBIES_LOG_LEVEL':'general worker logs — FULL | TXT | UI',
   'FREEBIES_LOG_LEVEL_CLAIMED':'"Freebie Claimed +X Diamonds" line — FULL | TXT | UI',
-  'FREEBIES_CLOSE_ROI':'x1,y1,x2,y2 search area for close_menu.png after claim',
+  'FREEBIES_CLOSE_ROI':'x1,y1,x2,y2 search area for the close button after claim',
+  'FREEBIES_CLOSE_TEMPLATE':'close-button template path relative to images/ (default close_menu.png; layouts with a light-edged X use workflows/menu/close_menu_tpl.png)',
   'FREEBIES_POST_CLAIM_DELAY_S':'wait after claim before searching close',
   /* founders */
   'FOUNDERS_ENABLED':'auto-start FOUNDERS BUNDLE on bot launch (requires restart)',

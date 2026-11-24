@@ -93,6 +93,7 @@ def settings_get():
                 "FREEBIES_LOG_LEVEL": s.FREEBIES_LOG_LEVEL,
                 "FREEBIES_LOG_LEVEL_CLAIMED": s.FREEBIES_LOG_LEVEL_CLAIMED,
                 "FREEBIES_CLOSE_ROI": list(s.FREEBIES_CLOSE_ROI),
+                "FREEBIES_CLOSE_TEMPLATE": s.FREEBIES_CLOSE_TEMPLATE,
                 "FREEBIES_POST_CLAIM_DELAY_S": s.FREEBIES_POST_CLAIM_DELAY_S,
             },
             "notices": {key: getattr(s, key) for key in s.NOTICE_DEFAULTS},

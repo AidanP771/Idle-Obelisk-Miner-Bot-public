@@ -190,3 +190,14 @@ class ConfigApiSafetyTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class FreebiesCloseTemplateTests(unittest.TestCase):
+    def test_close_template_override_is_validated_and_applied(self):
+        data = normalize_user_settings({"freebies": {"FREEBIES_CLOSE_TEMPLATE": "workflows/menu/close_menu_tpl.png"}})
+        settings = {}
+        apply_overrides_to_settings(settings, data)
+        self.assertEqual(settings["FREEBIES_CLOSE_TEMPLATE"], "workflows/menu/close_menu_tpl.png")
+        for bad in ("../outside.png", 5):
+            with self.subTest(bad=bad), self.assertRaises(ValueError):
+                normalize_user_settings({"freebies": {"FREEBIES_CLOSE_TEMPLATE": bad}})
