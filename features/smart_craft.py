@@ -976,7 +976,8 @@ def _load_trip():
         data = read_json(_TRIP_FILE) if _TRIP_FILE.exists() else None
         if data and {"origin", "floor", "until", "auto_was_on"} <= set(data):
             _set_trip({"origin": int(data["origin"]), "floor": int(data["floor"]),
-                       "until": float(data["until"]), "auto_was_on": bool(data["auto_was_on"])})
+                       "until": float(data["until"]), "auto_was_on": bool(data["auto_was_on"]),
+                       "started": float(data.get("started") or 0.0) or None})
             _log(f"[SMART_CRAFT] resuming floor trip {_trip['origin']} -> {_trip['floor']}")
     except (OSError, ValueError, TypeError) as exc:
         _log(f"[SMART_CRAFT] ignoring unreadable floor trip file: {exc}")
@@ -1149,9 +1150,11 @@ def _start_trip(missing_ore):
             except _Abort as exc:
                 _log(f"[SMART_CRAFT] could not switch floor Auto back on: {exc}")
         raise
+    trip_s = float(getattr(s, "SMART_CRAFT_FLOOR_TRIP_S", 600.0))
     _set_trip({"origin": current, "floor": target, "auto_was_on": auto_was_on,
-               "until": time.time() + float(getattr(s, "SMART_CRAFT_FLOOR_TRIP_S", 600.0))})
-    _log(f"[SMART_CRAFT] floor trip {current} -> {target} for missing ore {missing_ore}")
+               "until": time.time() + trip_s, "started": time.time()})
+    _log(f"[SMART_CRAFT] floor trip {current} -> {target} for missing ore {missing_ore}; "
+         f"returning after {trip_s:.0f}s at the next cycle (Auto was {'on' if auto_was_on else 'off'})")
     return target
 
 
@@ -1170,7 +1173,10 @@ def _end_trip():
     change_floor(_trip["origin"])
     if _trip["auto_was_on"]:
         set_floor_auto(True)
-    _log(f"[SMART_CRAFT] floor trip ended: back on floor {_trip['origin']}")
+    started = _trip.get("started")
+    took = f" after {time.time() - started:.0f}s" if started else ""
+    _log(f"[SMART_CRAFT] floor trip ended{took}: back on floor {_trip['origin']}"
+         f"{', Auto on again' if _trip['auto_was_on'] else ''}")
     _set_trip(None)
 
 

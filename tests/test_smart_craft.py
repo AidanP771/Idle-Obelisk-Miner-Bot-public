@@ -533,6 +533,7 @@ class FloorTripTests(SmartCraftBase):
         f.change_floor.assert_called_once_with(9)
         f.set_floor_auto.assert_called_once_with(False)
         self.assertEqual((f._trip["origin"], f._trip["floor"], f._trip["auto_was_on"]), (19, 9, True))
+        self.assertIn("started", f._trip)
         self.assertTrue(f._TRIP_FILE.exists())
         # Not due yet: stays; due: returns and restores Auto.
         f._floor_step({})
@@ -544,6 +545,8 @@ class FloorTripTests(SmartCraftBase):
         self.assertIsNone(f._trip)
         self.assertIsNone(self.state.smart_craft_trip)
         self.assertFalse(f._TRIP_FILE.exists())
+        ended = [c.args[0] for c in f.bot_log.call_args_list if "floor trip ended" in c.args[0]]
+        self.assertTrue(ended and " after " in ended[0] and "Auto on again" in ended[0], ended)
 
     def test_trip_is_undone_when_auto_cannot_be_switched_off(self):
         f = self.feature
