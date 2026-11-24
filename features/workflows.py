@@ -51,6 +51,7 @@ _manual_queue = []                    # list of slugs to run manually ASAP
 _manual_lock = threading.Lock()
 _reload_evt = threading.Event()
 _call_stack = []                      # active call_workflow chain (recursion guard)
+_defer_until = 0.0                    # set by a 'defer' step; applied to the top-level WF's next run
 _last_click_template_missed = False   # per-step flag: True when click_template
                                       # didn't find its template (even if optional
                                       # saved the step from failing). Consumed by
@@ -367,6 +368,18 @@ def _step_click_rotating(step: dict, wf: dict) -> bool:
     return True
 
 
+def _step_defer(step: dict, wf: dict) -> bool:
+    """Postpone the next automatic run of the top-level workflow (also when
+    reached inside a call_workflow) to at least `seconds` from now. The current
+    run continues; the scheduler applies the later of this and the interval."""
+    global _defer_until
+    secs = max(0.0, float(step.get("seconds", 0.0)))
+    _defer_until = max(_defer_until, time.time() + secs)
+    _log_step(f"[WF] defer: next automatic run not before "
+              f"{time.strftime('%H:%M:%S', time.localtime(_defer_until))} (+{secs:.0f}s)", wf)
+    return True
+
+
 def _step_wait(step: dict, wf: dict) -> bool:
     secs = float(step.get("seconds", 0.0))
     _log_step(f"[WF] wait {secs}s", wf)
@@ -603,6 +616,7 @@ _STEP_EXECUTORS = {
     "click_template": _step_click_template,
     "click_rotating": _step_click_rotating,
     "wait": _step_wait,
+    "defer": _step_defer,
     "rainbow_check": _step_rainbow_check,
     "call_workflow": _step_call_workflow,
     "hold_and_wiggle": _step_hold_and_wiggle,
@@ -903,6 +917,19 @@ def _eligible_workflows():
     return out
 
 
+def _reset_defer():
+    global _defer_until
+    _defer_until = 0.0
+
+
+def _apply_defer(rt):
+    """A 'defer' step ran: the next run is not before its time (caller holds
+    workflows_lock)."""
+    if _defer_until > 0.0:
+        rt["next_due_ts"] = max(float(rt.get("next_due_ts", 0.0) or 0.0), _defer_until)
+        _reset_defer()
+
+
 def _automation_paused() -> bool:
     return bool(getattr(state, "automation_paused", False))
 
@@ -935,12 +962,14 @@ def _scheduler_tick():
         with state.workflows_lock:
             _ensure_runtime_entry(slug, wf)
             rt = state.workflows[slug]
+        _reset_defer()
         result = _run_workflow(slug, wf, manual=True)
         with state.workflows_lock:
             rt["last_status"] = result
             rt["last_run_ts"] = time.time()
             if result == "ok":
                 rt["run_count"] = rt.get("run_count", 0) + 1
+            _apply_defer(rt)
         if _cancel_evt.is_set():
             return
         if _reload_evt.is_set():
@@ -971,6 +1000,7 @@ def _scheduler_tick():
         with state.workflows_lock:
             if not rt.get("enabled", False):
                 continue
+        _reset_defer()
         result = _run_workflow(slug, wf, manual=False)
         with state.workflows_lock:
             rt["last_status"] = result
@@ -987,6 +1017,7 @@ def _scheduler_tick():
                 rt["next_due_ts"] = time.time() + 30.0
             else:
                 rt["next_due_ts"] = _next_due(wf)
+            _apply_defer(rt)
         if _reload_evt.is_set():
             return
 

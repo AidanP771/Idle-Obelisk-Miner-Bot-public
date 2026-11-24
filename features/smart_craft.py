@@ -599,6 +599,24 @@ def _scroll_to_top(img, gray, generation):
     raise _Abort("list top not reached")
 
 
+_UNLOCK_AT_THRESHOLD = 0.8   # locked rows 0.857-1.0; "Unlocked" labels up to 0.79 (2026-11-24 frames)
+
+
+def locked_section_reached(gray):
+    """True if an "Unlock At ..." row is visible below every Buy button of this
+    page. Lists are ordered by unlock level, so nothing below it can be bought
+    and scrolling further only shows near-identical locked rows (which also
+    defeat list_shift). Requiring it below the last Buy keeps "... Unlocked"
+    labels above buyable rows from stopping a scan."""
+    roi = _list_roi()
+    locked = find_all(gray, _tpl("unlock_at.png"), roi, _UNLOCK_AT_THRESHOLD)
+    if not locked:
+        return False
+    buys = find_all(gray, _tpl("buy.png"), roi, float(getattr(s, "SMART_CRAFT_BUTTON_THRESHOLD", 0.8)))
+    lowest_buy = max((y for _x, y in buys), default=-1)
+    return max(y for _x, y in locked) > lowest_buy
+
+
 def list_pages(img, gray, generation):
     """Yield (img, gray, offset) from the top of the list to its end; offset is
     how far the content has moved up since the first page."""
@@ -610,6 +628,8 @@ def list_pages(img, gray, generation):
         if page == pages:
             _log(f"[SMART_CRAFT] scroll limit reached ({pages} pages)")
             return
+        if locked_section_reached(gray):
+            return  # only locked rows further down
         _scroll_list("up")
         new_img, new_gray = _fresh()
         shift = list_shift(gray, new_gray, content_up=True)
@@ -820,16 +840,43 @@ def _read_stable_row(bar):
     return None
 
 
+_NO_CRAFT_ROW_S = 1800.0   # recheck a bar without a Craft row after this long
+_no_craft_row = {}          # bar -> time its icon was missing from every Craft page
+
+
+def _icon_on_page(img, bar):
+    return any(name == bar for name, *_rest in _craft_icons(img))
+
+
 def _locate_craft_row(bar, generation):
-    """Bring bar's Craft row into view (scrolling if needed) and read it."""
+    """Bring bar's Craft row into view (scrolling if needed) and read it.
+    A bar whose icon is on no Craft page (not unlocked yet, e.g. after a
+    prestige) is remembered for _NO_CRAFT_ROW_S so later rounds skip it."""
     img, gray = _fresh()
+    seen = _icon_on_page(img, bar)
     if read_craft_row(img, gray, bar) is None:
         for img, gray, _offset in list_pages(img, gray, generation):
+            seen = seen or _icon_on_page(img, bar)
             if read_craft_row(img, gray, bar) is not None:
                 break
         else:
+            if not seen:
+                _no_craft_row[bar] = time.time()
+                _log(f"[SMART_CRAFT] {bar}: no Craft row on any page (not unlocked yet?) "
+                     f"-> skipped for {_NO_CRAFT_ROW_S / 60:.0f} min")
             return None
+    _no_craft_row.pop(bar, None)
     return _read_stable_row(bar)
+
+
+def _skip_without_craft_row(shortfalls):
+    """Drop bars recently found without a Craft row; returns the skipped names."""
+    now = time.time()
+    skipped = sorted(bar for bar in shortfalls
+                     if now - _no_craft_row.get(bar, -_NO_CRAFT_ROW_S) < _NO_CRAFT_ROW_S)
+    for bar in skipped:
+        shortfalls.pop(bar)
+    return skipped
 
 
 def select_quantity(mode="5x"):
@@ -1421,6 +1468,9 @@ def run_cycle(generation=None) -> str:
                 _log(f"[SMART_CRAFT] Workshop: {len({r[3] for r in ws_rows})} buyable row(s)")
                 rows = rows + ws_rows
             shortfalls = compute_shortfalls(rows)
+            not_craftable = _skip_without_craft_row(shortfalls)
+            if not_craftable:
+                _log(f"[SMART_CRAFT] no Craft row yet (skipped): {', '.join(not_craftable)}")
             summary = ", ".join(f"{b} {h}/{t}" for b, (h, t) in shortfalls.items()) or "none"
             first_summary = first_summary or summary
             _ore_missing.clear()

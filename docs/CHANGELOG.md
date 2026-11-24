@@ -12,6 +12,24 @@ Local, unversioned changes (`config/user_workflows.json`,
 
 ## 2026-11-24
 
+### Audit phase 1: obelisk back-off, skip missing Craft rows, stop at locked rows (this entry's commit)
+- Audit (after the 11:19 restart): the obelisk was opened every minute only to
+  find the damage warning; Smart Craft spent 9-14 s per round searching the
+  Craft list for each bar not unlocked yet; every Workshop scan scrolled once
+  into the locked rows ("list position unknown").
+- New workflow step `defer` (validation, editor, tests): the next automatic
+  run of the top-level workflow is not before now + seconds. Local workflow:
+  `obelisk_fight_attack` damage-warning branch defers 900 s.
+- Smart Craft remembers bars whose icon is on no Craft page for 30 min and
+  skips them ("no Craft row yet (skipped): ...").
+- `list_pages` stops once "Unlock At" (`images/smart_craft/unlock_at.png`) is
+  visible below every Buy button; checked on all saved list frames (11 stop,
+  33 continue, the "Unlocked" label case included).
+- Verified: 310 Python and 27 JS tests; engine dry run of the obelisk defer
+  (next check +900 s). Needs a restart (the running bot rejects the new step
+  type until then).
+
+
 ### Branch history rewritten (messages only)
 - At the user's request, the `Co-Authored-By` trailers were removed from all
   branch commits with `git filter-branch --msg-filter` and the branch was
@@ -224,3 +242,4 @@ Backups of each step are kept in the session scratchpad, not in the repo.
 | 2026-11-24 | `user_workflows.json` | `buy_drone_points`: tap the "Drone Upgrades" top tab; swipe area [80,420,820,1350]; Max/Exchange optional, each followed by `if last_step_failed` -> close menu and abort. |
 | 2026-11-24 | `user_workflows.json` | `buy_drone_points` swipe area [80,420,820,1350] (the default area started the finger on the Drone Suits tab); confirmed live 10:50. |
 | 2026-11-24 | `user_settings.json` | `LOOTBUG_CHECK_INTERVAL_S` 180 -> 15 (scans no longer take the action lock). |
+| 2026-11-24 | `user_workflows.json` | `obelisk_fight_attack`: `defer` 900 s in the damage-warning branch (needs the restart that brings the new step type). |

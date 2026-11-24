@@ -558,6 +558,51 @@ class WaitUntilTests(SmartCraftBase):
         self.assertEqual(f._fresh.call_count, 1)
 
 
+class LockedSectionTests(SmartCraftBase):
+    def test_stops_only_when_locked_rows_are_below_every_buy(self):
+        f = self.feature
+        def finder(locked, buys):
+            return Mock(side_effect=lambda gray, tpl, roi, thr: locked if "unlock_at" in tpl else buys)
+        f.find_all = finder([(300, 900)], [(700, 300), (700, 600)])
+        self.assertTrue(f.locked_section_reached(None))          # Workshop end: locked below the last Buy
+        f.find_all = finder([(450, 400)], [(700, 450), (700, 800)])
+        self.assertFalse(f.locked_section_reached(None))         # "... Unlocked" label above buyable rows
+        f.find_all = finder([], [(700, 450)])
+        self.assertFalse(f.locked_section_reached(None))
+        f.find_all = finder([(300, 200)], [])
+        self.assertTrue(f.locked_section_reached(None))          # only locked rows on the page
+
+    def test_real_frames(self):
+        import cv2
+        f = self.feature
+        self.settings.SMART_CRAFT_LIST_ROI = (40, 170, 860, 1395)
+        for name, expected in (("workshop_end", True), ("workshop_unlocked_label", False)):
+            gray = cv2.imread(str(ROOT / f"tests/data/smart_craft/{name}.png"), cv2.IMREAD_GRAYSCALE)
+            self.assertIsNotNone(gray, name)
+            self.assertEqual(f.locked_section_reached(gray), expected, name)
+
+
+class NoCraftRowTests(SmartCraftBase):
+    def test_bar_without_icon_on_any_page_is_skipped_for_a_while(self):
+        f = self.feature
+        f._no_craft_row.clear()
+        f._fresh = Mock(return_value=(None, None))
+        f.read_craft_row = Mock(return_value=None)
+        f._craft_icons = Mock(return_value=[("mithril", 520, 400, 0.9)])
+        f.list_pages = lambda img, gray, gen: iter([(img, gray, 0), (img, gray, 400)])
+        self.assertIsNone(f._locate_craft_row("adamant", f._run_generation))
+        self.assertIn("adamant", f._no_craft_row)
+        self.assertIsNone(f._locate_craft_row("mithril", f._run_generation))   # icon seen, row unreadable
+        self.assertNotIn("mithril", f._no_craft_row)
+        shortfalls = {"adamant": (0, 8), "mithril": (0, 6)}
+        self.assertEqual(f._skip_without_craft_row(shortfalls), ["adamant"])
+        self.assertEqual(shortfalls, {"mithril": (0, 6)})
+        f._no_craft_row["adamant"] -= f._NO_CRAFT_ROW_S                         # expired: try again
+        shortfalls = {"adamant": (0, 8)}
+        self.assertEqual(f._skip_without_craft_row(shortfalls), [])
+        f._no_craft_row.clear()
+
+
 class FloorTripTests(SmartCraftBase):
     def setUp(self):
         super().setUp()

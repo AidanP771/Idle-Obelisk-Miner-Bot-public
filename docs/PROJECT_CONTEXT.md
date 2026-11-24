@@ -187,8 +187,10 @@ lazy imports to avoid circular imports. Level detection writes
   until the page is recognised (up to 3 x `SMART_CRAFT_UI_DELAY_S`). One cycle holds `state.ingame_action_lock`
   throughout: open main menu -> Upgrades, scroll from the top through the
   list and read every row that has a Buy button and a bar cost (bar icon +
-  `have/need`), stopping at the locked "Unlock At Level" section. Per bar
-  type the target depends on `SMART_CRAFT_CRAFT_TARGET`: `next` (default) =
+  `have/need`), stopping at the locked "Unlock At Level" section (no further
+  scroll once `unlock_at.png` is visible below every Buy button). Per bar
+  type the target depends on `SMART_CRAFT_CRAFT_TARGET` (bars whose icon is on
+  no Craft page, e.g. not unlocked after a prestige, are skipped for 30 min): `next` (default) =
   the cheapest row's need (enough for the next purchase; the following round
   crafts for the next one), `all` = the sum of all needs (before 2026-11-24
   the only mode; it usually turns all ore into bars). Rows with two costs (two bars, or
@@ -439,6 +441,10 @@ rationale is not documented:
   floor-trip return when Smart Craft is switched off are not gated. The
   dashboard derives *Pausing…* from `action_lock.locked`. A new feature that
   takes the action lock must check the flag too.
+- Workflow step `defer` (`seconds`): the next automatic run of the top-level
+  workflow (also when reached inside a called helper) is not before now +
+  seconds; the current run continues. Used to back off when a check cannot
+  succeed for a while (obelisk damage warning).
 - Workflows run serially and normally hold the lock for the full flow, including
   subworkflows. `ignore_action_lock` is an existing intentional exception that
   allows interaction with other features.

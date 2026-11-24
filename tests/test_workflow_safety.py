@@ -132,6 +132,29 @@ class WorkflowSafetyTests(unittest.TestCase):
         self.assertEqual(self.w.tap.call_count, 1)
         self.assertEqual(self.w._manual_queue, ["b"])
 
+    def test_defer_step_in_a_called_helper_postpones_the_top_level_workflow(self):
+        self.w.cfg_wf.WORKFLOWS = {
+            "parent": {"steps": [{"type": "call_workflow", "target": "child"}],
+                       "enabled_default": True, "interval_s": 60},
+            "child": {"steps": [{"type": "defer", "seconds": 900}, {"type": "tap_xy", "x": 1, "y": 2}]},
+            "other": {"steps": [{"type": "tap_xy", "x": 3, "y": 4}], "enabled_default": True, "interval_s": 60}}
+        for slug in ("parent", "other"):
+            self.w._ensure_runtime_entry(slug, self.w.cfg_wf.WORKFLOWS[slug])
+            self.w.state.workflows[slug]["next_due_ts"] = time.time() - 1
+        before = time.time()
+        self.w._scheduler_tick()
+        self.assertEqual(self.w.state.workflows["parent"]["last_status"], "ok")
+        self.assertEqual(self.w.tap.call_count, 2)                       # the run continued after defer
+        self.assertGreaterEqual(self.w.state.workflows["parent"]["next_due_ts"], before + 899)
+        self.assertLess(self.w.state.workflows["other"]["next_due_ts"], before + 120)   # not affected
+        self.assertEqual(self.w._defer_until, 0.0)
+
+    def test_defer_step_is_validated(self):
+        from config.validation import validate_workflows
+        validate_workflows({"wf": {"steps": [{"type": "defer", "seconds": 600}]}})
+        with self.assertRaises(ValueError):
+            validate_workflows({"wf": {"steps": [{"type": "defer", "seconds": 0}]}})
+
     def test_master_off_during_last_step_is_cancelled_and_does_not_count(self):
         def turn_off(*args, **kwargs):
             self.w.toggle_master()

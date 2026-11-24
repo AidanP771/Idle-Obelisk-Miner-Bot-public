@@ -57,6 +57,8 @@ Measured at 900 x 1600, English UI. Coordinates are full-resolution pixels.
 - Each Upgrades row costs either bars or gold (coin icon, e.g. Pickaxe Crit Damage 0/60, Free Bomb Chance 0/80); no row with both was seen on 30 saved rows (2026-11-24). Gold rows have the same Buy button (bright red = affordable).
 
 ### Workshop (Permanent -> Workshop)
+- After a prestige (floor 5, 2026-11-24) the Craft page has no rows for adamant/amethyst/citrine/runite/topaz (inferred: their searches failed while mithril's row was read); each search cost 9-14 s per round until such bars were remembered as not craftable for 30 min.
+- "Unlock At" rows: `unlock_at.png` scores 0.857-1.0 on locked rows; the label "Bomb Of Plenty Unlocked" scores 0.79, hence the extra rule "below every Buy button".
 - The third cost column renders digits one sub-pixel shifted; its '4' matched no reference clearly, so every third-column cost with a 4 (amethyst/runite/citrine "14/", "74/") was unreadable and the row skipped (248 times in one log, 2026-11-24). Added `digits/4_3.png` from a live frame; on 239 saved frames only the failing frame's reads changed (both rows now read). Regression crops: `tests/data/smart_craft/`.
 - Header "Spend Bars on Permanent Upgrades!"; rows cost up to three bar types,
   each shown as an icon with `have/` on one line and `need` below (grey text).
@@ -104,6 +106,7 @@ Timing (2026-11-24): a lootbug could stay on screen for minutes. Scans ran only 
 - Not yet verified: whether a floor tap asks for confirmation; whether leaving a floor resets its clear counter.
 
 ### Obelisk
+- After the 2026-11-24 prestige the damage warning stayed; the old workflow opened and closed the obelisk every 60 s (about 5 s of lock and 3 taps each).
 - Main-screen timer at about (840, 490) shows yellow `0:00` when ready.
 - The 20 min cooldown starts after the most recent fight (user observation 2026-11-23); a skipped fight does not start it.
 - The fight needs a **hold** on the obelisk at (450, 800); a fight lasts about 34 s. ADB commands time out at 30 s, so the workflow holds 5 x 8 s.
@@ -149,7 +152,8 @@ replaces the default workflows. The reference setup uses:
 | `bomb_rotation_early_game` | on, 30 s | Optional close of a leftover menu (`menu/close_menu_tpl`, ROI [405,1471,658,1546]: 1.0 with a menu open, <= 0.27 on the main screen over 239 frames); optional panel open; one round of Exp, Plenty (mark), Basic (break), Chain - one tap each, each bomb in an `if template_visible` (0.9) so locked bombs are skipped; optional panel close. About 10 s per run (2026-11-24; was 5 rounds every 90 s, 57 s per run). |
 | `bomb_basic_rotation_all` | off, inactive | Original default rotation (2 s holds); `enabled_default` false so it stays off after restarts. |
 | `obelisk_fight` | on, 60 s (only a screenshot when not ready) | If `obelisk/main_ready_tpl` is visible -> call `obelisk_fight_attack`. |
-| `obelisk_fight_attack` | helper | Tap the obelisk HUD button at (843,440) (fixed position: its icon changes with every obelisk level, so `obelisk_button_tpl` stopped matching after Obelisk 4), Fight tab; Claim Victory visible (`obelisk/claim_victory_tpl`, 0.9) -> claim; damage warning or no ready Attack -> close; else Attack, hold (450,800) 5 x 8 s, optional Exit and Return To Mines. |
+| `obelisk_fight_attack` | helper | Damage-warning branch ends with `defer` 900 s (2026-11-24), so a too-weak pickaxe costs one check per 15 min instead of one per minute. |
+| `obelisk_fight_attack` (steps) | helper | Tap the obelisk HUD button at (843,440) (fixed position: its icon changes with every obelisk level, so `obelisk_button_tpl` stopped matching after Obelisk 4), Fight tab; Claim Victory visible (`obelisk/claim_victory_tpl`, 0.9) -> claim; damage warning or no ready Attack -> close; else Attack, hold (450,800) 5 x 8 s, optional Exit and Return To Mines. |
 | `auto_prestige` | on, 600 s | If `hud/level_capped_tpl` (0.9) is visible -> call `prestige`. |
 | `prestige` | helper | Open Prestige page, swipe down twice (scroll to top); only if the Prestige button is visible -> close menu, call `prestige_execute`; else close menu. Drone points are therefore bought only right before a prestige. |
 | `prestige_execute` | helper | Sell All (two taps), call `buy_drone_points`, open Prestige page, press Prestige (2 clicks), close. |
@@ -196,7 +200,7 @@ Pitfalls:
 
 - Unit tests: `.venv/Scripts/python.exe -B -m unittest discover -s tests -v`
   and the `node --test` command from `AGENTS.md`. One intermittent error was
-  seen in unrelated tests (again 2026-11-24: `test_gem_statistics` fourteen-days test and `test_secret_key` concurrent starts) and did not reproduce on rerun.
+  seen in unrelated tests (2026-11-24: `test_gem_statistics` and `test_secret_key`; cause: `os.replace` in `config/json_store.py` raises `PermissionError` [WinError 5] when the target is briefly open, a real risk for every JSON save) and did not reproduce on rerun.
 - Offline checks: save frames from a read-only pass (open page, scroll, close)
   and run the feature's readers on them (`read_upgrade_rows`, `read_craft_row`,
   `read_floor_panel`, `read_sell_rows`). This caught the missing Demonite icon.
@@ -217,7 +221,7 @@ Pitfalls:
 
 - Restart pending (2026-11-24, all code since `267d269`): floor-trip Auto handling, gold upgrades option, Pause after current, Lootbug lock waiting, craft target `next`, exec-out screenshots, page polling, the new '4' glyph. After the restart check the log for `method=exec_out`, `floor trip ... returning after`, `[LOOTBUG] lootbug visible ... waiting`, and Smart Craft cycle length. Floor Auto was off on 2026-11-24 and must be switched on once by hand.
 - Obelisk timer scheduling (not built): the HUD countdown (`m:ss`, about (805-885, 475-505)) uses the pixel font at 17 px height; the Smart Craft glyph set reads only some digits there, and ':' breaks segmentation. It needs its own digit references and a workflow step that sets the next due time. Current cost of polling: one screenshot per 60 s, at most about 60 s late per 20 min cooldown.
-- Smart Craft "list position unknown after scrolling" (101 times on 2026-11-24): cause not found yet. The before/after frames are now saved to `temp/smart_craft_debug/` (newest 40); analyse them with `list_shift` offline. Unreadable Workshop costs are dumped there too.
+- Smart Craft "list position unknown after scrolling": the two dumped cases (2026-11-24) were the Workshop list scrolled past its last buyable row into near-identical "Unlock At Obelisk Level N" rows (no rows missed). Lists now stop once locked rows show below every Buy button; watch whether the warning still appears. Frames are still dumped to `temp/smart_craft_debug/`.
 - Screenshots: `exec_out` capture (2026-11-24) not yet observed in the running bot; check `method=exec_out` and `elapsed=` in `[SCREENSHOT]` lines after a restart.
 - Smart Craft page opening polls for the page (2026-11-24); other taps (craft batches, buys, scrolls, closing) still wait a fixed `SMART_CRAFT_UI_DELAY_S`.
 - `SMART_CRAFT_CRAFT_TARGET = next` (2026-11-24): compare cycle length and purchases per cycle with the old `all` behaviour (2026-11-24 morning: 250-360 s per cycle, 2179 bars for 38 purchases).

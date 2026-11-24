@@ -227,6 +227,7 @@ STEPS = {
                        "mask": choice("circle", "none"), "downscale": optional(number(1, integer=True)),
                        "log_mode": choice("both", "hit_only", "miss_only", "none")},
     "wait": {"seconds": N},
+    "defer": {"seconds": POS},
     "rainbow_check": {"roi": roi, "sat_min": optional(number(0, 255, integer=True)),
         "val_min": optional(number(0, 255, integer=True)), "min_sat_pixels": optional(I),
         "min_hue_buckets": optional(number(1, 180, integer=True)),

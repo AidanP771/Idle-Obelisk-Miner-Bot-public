@@ -34,6 +34,7 @@ const STEP_TYPES = [
   {value:'click_template',  label:'Click Template'},
   {value:'click_rotating',  label:'Click Rotating Template'},
   {value:'wait',            label:'Wait (Sleep)'},
+  {value:'defer',           label:'Defer Next Run'},
   {value:'rainbow_check',   label:'Rainbow Floor Check'},
   {value:'call_workflow',   label:'Call Workflow'},
   {value:'hold_and_wiggle', label:'Hold & Wiggle (chained swipes)'},
@@ -100,6 +101,9 @@ const STEP_FIELDS = {
   ],
   'wait': [
     {k:'seconds',             label:'Seconds',                        type:'num', step:0.1},
+  ],
+  'defer': [
+    {k:'seconds',             label:'Seconds',                        type:'num', step:10, hint:'The next automatic run of this workflow (the top-level one, also from a called helper) is not before now + Seconds. The current run continues.'},
   ],
   'rainbow_check': [
     {k:'roi',                    label:'ROI (x1,y1,x2,y2)',           type:'roi'},
