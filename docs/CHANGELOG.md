@@ -12,7 +12,7 @@ Local, unversioned changes (`config/user_workflows.json`,
 
 ## 2026-11-24
 
-### Smart Craft: optional gold upgrades (this entry's commit)
+### Smart Craft: optional gold upgrades (`617e8e0`)
 - Request: an option to enable or disable upgrades that cost gold.
 - In game each upgrade costs either bars or gold; Smart Craft only ever bought
   bar rows. New setting `SMART_CRAFT_BUY_GOLD_UPGRADES` (default off = never
