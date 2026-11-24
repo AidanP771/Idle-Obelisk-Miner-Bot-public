@@ -114,7 +114,7 @@ replaces the default workflows. The reference setup uses:
 | --- | --- | --- |
 | `bomb_rotation_early_game` | on, 60 s | Optional panel open; Exp, Plenty (mark), Basic (break), wait 3 s, Chain, wait 3 s, Basic; single taps; each bomb in an `if template_visible` (0.9) so locked bombs are skipped; optional panel close. |
 | `obelisk_fight` | on, 300 s | If `obelisk/main_ready_tpl` is visible -> call `obelisk_fight_attack`. |
-| `obelisk_fight_attack` | helper | Obelisk button, Fight tab; Claim Victory visible (`obelisk/claim_victory_tpl`, 0.9) -> claim; damage warning or no ready Attack -> close; else Attack, hold (450,800) 5 x 8 s, optional Exit and Return To Mines. |
+| `obelisk_fight_attack` | helper | Tap the obelisk HUD button at (843,440) (fixed position: its icon changes with every obelisk level, so `obelisk_button_tpl` stopped matching after Obelisk 4), Fight tab; Claim Victory visible (`obelisk/claim_victory_tpl`, 0.9) -> claim; damage warning or no ready Attack -> close; else Attack, hold (450,800) 5 x 8 s, optional Exit and Return To Mines. |
 | `auto_prestige` | on, 600 s | If `hud/level_capped_tpl` (0.9) is visible -> call `prestige`. |
 | `prestige` | helper | Open Prestige page; only if the Prestige button is visible -> close menu, call `prestige_execute`; else close menu. Drone points are therefore bought only right before a prestige. |
 | `prestige_execute` | helper | Sell All (two taps), call `buy_drone_points`, open Prestige page, press Prestige (2 clicks), close. |
