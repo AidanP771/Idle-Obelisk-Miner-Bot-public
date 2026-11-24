@@ -227,7 +227,7 @@ Pitfalls:
 
 - Drone point check and floor Auto guard (2026-11-24): not yet observed live. Look for `[WF] read_number drone_points=` (two lines per prestige, the second increased) and `[FLOOR_AUTO]` lines.
 - Smart Craft yield policy (2026-11-24): check that bombs now run about once per 45-60 s during a cycle and that cycles pause less often.
-- Restart pending (2026-11-24, all code since `267d269`): floor-trip Auto handling, gold upgrades option, Pause after current, Lootbug lock waiting, craft target `next`, exec-out screenshots, page polling, the new '4' glyph. After the restart check the log for `method=exec_out`, `floor trip ... returning after`, `[LOOTBUG] lootbug visible ... waiting`, and Smart Craft cycle length. Floor Auto was off on 2026-11-24 and must be switched on once by hand.
+- Restart pending (2026-11-24, all code since `267d269`): floor-trip Auto handling, gold upgrades option, Pause after current, Lootbug lock waiting, craft target `next`, exec-out screenshots, page polling, the new '4' and '3' glyphs, the level-counter purchase check. After the restart check the log for `method=exec_out`, `floor trip ... returning after`, `[LOOTBUG] lootbug visible ... waiting`, Smart Craft cycle length, and `bought upgrade ... (level n -> n+1)` / `not confirmed ... -> skipping this row`. Floor Auto off is now switched back on by the floor Auto guard (`[FLOOR_AUTO]`).
 - Obelisk timer scheduling (not built): the HUD countdown (`m:ss`, about (805-885, 475-505)) uses the pixel font at 17 px height; the Smart Craft glyph set reads only some digits there, and ':' breaks segmentation. It needs its own digit references and a workflow step that sets the next due time. Current cost of polling: one screenshot per 60 s, at most about 60 s late per 20 min cooldown.
 - Smart Craft "list position unknown after scrolling": the two dumped cases (2026-11-24) were the Workshop list scrolled past its last buyable row into near-identical "Unlock At Obelisk Level N" rows (no rows missed). Lists now stop once locked rows show below every Buy button; watch whether the warning still appears. Frames are still dumped to `temp/smart_craft_debug/`.
 - Screenshots: `exec_out` capture (2026-11-24) not yet observed in the running bot; check `method=exec_out` and `elapsed=` in `[SCREENSHOT]` lines after a restart.
@@ -235,10 +235,9 @@ Pitfalls:
 - `SMART_CRAFT_CRAFT_TARGET = next` (2026-11-24): compare cycle length and purchases per cycle with the old `all` behaviour (2026-11-24 morning: 250-360 s per cycle, 2179 bars for 38 purchases).
 - Floor trips: no trip has run yet (trip start/end now log planned and real duration). Every attempt since at least 2026-11-24 08:00 moved 19 -> 11 and back within 7 s (Auto unreadable) and left Auto off; fixed in code, needs a restart and a live trip.
 - Surplus-ore selling: full sequence not yet run in game.
-- Gold upgrades (`SMART_CRAFT_BUY_GOLD_UPGRADES`, off by default): not yet run live; offline the reader finds the gold rows on four saved frames, all unaffordable (gold 0), so a lit gold Buy button has not been seen yet.
+- Gold upgrades (`SMART_CRAFT_BUY_GOLD_UPGRADES`, off by default, on locally): a lit gold Buy was tapped live (2026-11-24 12:51, y=672), but the old check could not confirm it; a confirmed gold purchase is not yet seen (level-counter check needs the restart).
 - Workshop buying is not yet observed live (bars were 0 after the prestige).
 - `SMART_CRAFT_YIELD` and the Freebies close template: verify after the next restart (`pausing for waiting workflow(s)`, `tap close-menu`).
-- `buy_drone_points` cannot tell whether the exchange bought anything (gold below one drone point's price); reading the drone point counter before/after would make that visible.
 - Whether drone upgrades survive prestige: compare before/after the next prestige.
 - Skill-Tree (unlocked at Obelisk 4): automation ideas from the wiki discussed, nothing built (user: explore as we go).
 - An Upgrades pin was added to the bottom bar by a stray tap (harmless; remove via Setup Pins).
