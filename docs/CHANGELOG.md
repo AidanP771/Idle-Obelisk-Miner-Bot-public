@@ -25,8 +25,10 @@ Local, unversioned changes (`config/user_workflows.json`,
 - Verified: 302 Python tests (screen cache: exec-out path, fallback to pull,
   invalid PNG never replaces the cache; existing tests pinned to `pull`).
   Not verified in the running bot (needs a restart).
-- The planned "poll until the page is ready" for Smart Craft's fixed UI delay
-  is not done yet (open item).
+- Follow-up commit: Smart Craft opens the main menu and its pages by polling
+  every 0.25 s until the page is ready (up to 3 x `SMART_CRAFT_UI_DELAY_S`)
+  instead of one fixed delay: earlier when the game is fast, more tolerant
+  when it is slow. Other fixed delays are unchanged.
 
 
 ### Smart Craft crafts for the next purchase (`8425264`)

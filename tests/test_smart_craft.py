@@ -507,6 +507,25 @@ class LockTests(SmartCraftBase):
         self.assertEqual(self.state.smart_craft_last_status, "stopped: main menu did not open")
 
 
+class WaitUntilTests(SmartCraftBase):
+    def test_returns_as_soon_as_the_page_is_ready_and_gives_up_after_three_delays(self):
+        f = self.feature
+        self.settings.SMART_CRAFT_UI_DELAY_S = 0.1
+        frames = iter([("a", "a"), ("b", "b")] + [("c", "c")] * 50)
+        f._fresh = Mock(side_effect=lambda: next(frames))
+        img, gray, ok = f._wait_until(lambda img, gray: img == "b")
+        self.assertEqual((img, ok), ("b", True))
+        self.assertEqual(f._fresh.call_count, 2)
+        f._fresh.reset_mock()
+        _img, _gray, ok = f._wait_until(lambda img, gray: False)
+        self.assertFalse(ok)
+        self.assertEqual(f._fresh.call_count, 3)                   # 3 x 0.1 s in 0.1 s steps
+        self.settings.SMART_CRAFT_UI_DELAY_S = 0.0                 # zero delay: exactly one check
+        f._fresh.reset_mock()
+        f._wait_until(lambda img, gray: False)
+        self.assertEqual(f._fresh.call_count, 1)
+
+
 class FloorTripTests(SmartCraftBase):
     def setUp(self):
         super().setUp()

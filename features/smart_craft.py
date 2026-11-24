@@ -297,6 +297,22 @@ def _delay():
     time.sleep(float(getattr(s, "SMART_CRAFT_UI_DELAY_S", 0.8)))
 
 
+def _wait_until(ready):
+    """Poll fresh frames until ready(img, gray) after a navigation tap, instead
+    of one fixed SMART_CRAFT_UI_DELAY_S wait: checks every 0.25 s for up to
+    three times the delay. Returns (img, gray, ok); always checks once."""
+    delay = float(getattr(s, "SMART_CRAFT_UI_DELAY_S", 0.8))
+    step = min(0.25, delay)
+    checks = max(1, int(round(3 * delay / step))) if step > 0 else 1
+    for _ in range(checks):
+        if step > 0:
+            time.sleep(step)
+        img, gray = _fresh()
+        if ready(img, gray):
+            return img, gray, True
+    return img, gray, False
+
+
 def _check_cancel(generation):
     if _stop_evt.is_set() or generation != _run_generation:
         raise _Abort("cancelled")
@@ -332,17 +348,15 @@ def _open_page(tile, ready, name, generation, section="this_prestige"):
         if not button["found"]:
             raise _Abort(f"main menu button not found (score={button['score']:.3f})")
         _tap(button["cx"], button["cy"], "main menu")
-        _delay()
-        img, gray = _fresh()
-        if not _menu_open(gray):
+        img, gray, opened = _wait_until(lambda _img, g: _menu_open(g))
+        if not opened:
             raise _Abort("main menu did not open")
     match = _button(gray, f"workflows/menu/{section}/{tile}.png", (10, 100, 890, 1579))
     if not match["found"]:
         raise _Abort(f"{name} tile not found (score={match['score']:.3f})")
     _tap(match["cx"], match["cy"], name)
-    _delay()
-    img, gray = _fresh()
-    if not ready(img, gray):
+    img, gray, opened = _wait_until(ready)
+    if not opened:
         raise _Abort(f"{name} page did not open")
     return img, gray
 
