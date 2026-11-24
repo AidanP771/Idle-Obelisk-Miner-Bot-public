@@ -215,7 +215,7 @@ Pitfalls:
 
 ## Open Items
 
-- Restart pending (2026-11-24, all code since `9f734b3`): floor-trip Auto handling, gold upgrades option, Pause after current, Lootbug lock waiting, craft target `next`, exec-out screenshots, page polling, the new '4' glyph. After the restart check the log for `method=exec_out`, `floor trip ... returning after`, `[LOOTBUG] lootbug visible ... waiting`, and Smart Craft cycle length. Floor Auto was off on 2026-11-24 and must be switched on once by hand.
+- Restart pending (2026-11-24, all code since `267d269`): floor-trip Auto handling, gold upgrades option, Pause after current, Lootbug lock waiting, craft target `next`, exec-out screenshots, page polling, the new '4' glyph. After the restart check the log for `method=exec_out`, `floor trip ... returning after`, `[LOOTBUG] lootbug visible ... waiting`, and Smart Craft cycle length. Floor Auto was off on 2026-11-24 and must be switched on once by hand.
 - Obelisk timer scheduling (not built): the HUD countdown (`m:ss`, about (805-885, 475-505)) uses the pixel font at 17 px height; the Smart Craft glyph set reads only some digits there, and ':' breaks segmentation. It needs its own digit references and a workflow step that sets the next due time. Current cost of polling: one screenshot per 60 s, at most about 60 s late per 20 min cooldown.
 - Smart Craft "list position unknown after scrolling" (101 times on 2026-11-24): cause not found yet. The before/after frames are now saved to `temp/smart_craft_debug/` (newest 40); analyse them with `list_shift` offline. Unreadable Workshop costs are dumped there too.
 - Screenshots: `exec_out` capture (2026-11-24) not yet observed in the running bot; check `method=exec_out` and `elapsed=` in `[SCREENSHOT]` lines after a restart.

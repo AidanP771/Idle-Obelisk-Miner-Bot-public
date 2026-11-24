@@ -12,7 +12,15 @@ Local, unversioned changes (`config/user_workflows.json`,
 
 ## 2026-11-24
 
-### Docs and working rules (`583831e`)
+### Branch history rewritten (messages only)
+- At the user's request, the `Co-Authored-By` trailers were removed from all
+  branch commits with `git filter-branch --msg-filter` and the branch was
+  force-pushed. Files, authors and dates are unchanged; every commit since
+  `main` got a new hash, and the hashes in this log and the development notes
+  were remapped. Clones of the old branch need a reset to the fork.
+
+
+### Docs and working rules (`d93c033`)
 - AGENTS.md: lock-taking features must check the global pause; detect
   without the lock; workflow edits are validated and dry-run before reload;
   live checks only by log and screenshots; all JS tests via
@@ -23,7 +31,7 @@ Local, unversioned changes (`config/user_workflows.json`,
   most about 60 s per 20 min cooldown).
 
 
-### Workshop costs with a '4' readable; misread diagnostics (`947f573`)
+### Workshop costs with a '4' readable; misread diagnostics (`565cd02`)
 - Problem: Workshop rows were skipped 248 times ("cost ... unreadable"): the
   third cost column draws the '4' one sub-pixel shifted, which matched no
   glyph reference clearly. New reference `images/smart_craft/digits/4_3.png`
@@ -37,7 +45,7 @@ Local, unversioned changes (`config/user_workflows.json`,
   glyph). Not verified live.
 
 
-### Faster screenshots with exec-out (`a8837cb`)
+### Faster screenshots with exec-out (`0ee6f38`)
 - Each capture used three ADB calls (screencap to the device, pull, rm);
   Smart Craft and workflows take thousands of screenshots per day.
 - New setting `SCREENSHOT_CAPTURE_METHOD` (`exec_out` default, `pull` = old
@@ -56,7 +64,7 @@ Local, unversioned changes (`config/user_workflows.json`,
   when it is slow. Other fixed delays are unchanged.
 
 
-### Smart Craft crafts for the next purchase (`8425264`)
+### Smart Craft crafts for the next purchase (`e9689c9`)
 - Problem: each cycle turned all ore into bars (target = sum of every visible
   upgrade's need), switching 1x/5x per bar; cycles held the game 250-360 s and
   crafted 2179 bars for 38 purchases.
@@ -70,7 +78,7 @@ Local, unversioned changes (`config/user_workflows.json`,
   length and purchases per cycle.
 
 
-### Lootbug is taken within seconds (`f0e9cea`)
+### Lootbug is taken within seconds (`68c4361`)
 - Problem: a lootbug stayed on screen for minutes although the run needs three
   taps. Scans ran every 180 s; a seen lootbug needed the action lock and only
   retried every 15 s, losing to bombs and Smart Craft (255 postpones in one
@@ -87,10 +95,10 @@ Local, unversioned changes (`config/user_workflows.json`,
   verified live (needs a restart).
 
 
-### Floor trip timing in the log; drone purchase confirmed live (`8b37138`)
+### Floor trip timing in the log; drone purchase confirmed live (`33339b0`)
 - Floor trips (request: "the last trip was very short"): no real trip had
   ever run - every attempt returned within 7 s because the Auto toggle was
-  unreadable (fixed in `9f734b3`). Trips now log their planned return time and
+  unreadable (fixed in `267d269`). Trips now log their planned return time and
   the Auto state at the start, and the real duration at the end
   (`started` is stored in `smart_craft_trip.json`; older files still load).
 - Drone purchase: confirmed live at 10:50 with the swipe area
@@ -99,7 +107,7 @@ Local, unversioned changes (`config/user_workflows.json`,
 - Verified: 294 Python tests. Floor trips still need a restart and a live trip.
 
 
-### Pause after current (`1c199b1`)
+### Pause after current (`1cfc7ee`)
 - Request: a WebUI option to pause the automation queue after the current
   automation has finished.
 - New dashboard button **Pause after current** (command
@@ -112,7 +120,7 @@ Local, unversioned changes (`config/user_workflows.json`,
   states). Not verified live (needs a restart).
 
 
-### Smart Craft: optional gold upgrades (`617e8e0`)
+### Smart Craft: optional gold upgrades (`e1744e8`)
 - Request: an option to enable or disable upgrades that cost gold.
 - In game each upgrade costs either bars or gold; Smart Craft only ever bought
   bar rows. New setting `SMART_CRAFT_BUY_GOLD_UPGRADES` (default off = never
@@ -125,7 +133,7 @@ Local, unversioned changes (`config/user_workflows.json`,
   rows on four real frames (all unaffordable). Not verified live.
 
 
-### Floor Auto restored after floor trips; bombs, drones and menus (`9f734b3`)
+### Floor Auto restored after floor trips; bombs, drones and menus (`267d269`)
 - Problem: floor auto-descend was off. Every Smart Craft floor trip since at
   least 08:00 moved 19 -> 11 and straight back (6-7 s) with "floor Auto toggle
   not recognised": the off state is dark maroon, the reader only knew bright
@@ -146,7 +154,7 @@ Local, unversioned changes (`config/user_workflows.json`,
 
 ## 2026-11-23
 
-### Smart Craft pauses for waiting workflows (`986be36`)
+### Smart Craft pauses for waiting workflows (`431e6ab`)
 - Problem: Smart Craft held the action lock for 5-8 min per cycle; the
   obelisk check ran only every 8-14 min (interval 250 s) and the bomb
   rotation had ~10 min gaps.
@@ -157,7 +165,7 @@ Local, unversioned changes (`config/user_workflows.json`,
 - Verified: unit tests (280 Python, 14 JS). Not yet observed live (needs a
   process restart).
 
-### Safe drone-point purchase before prestige (`779e4db`)
+### Safe drone-point purchase before prestige (`f68f2ee`)
 - Problem: the 23:12 prestige ran with unspent gold. The Drones page keeps its
   scroll position; one swipe did not reach the top and the fixed-coordinate
   Max/exchange taps missed.
@@ -165,11 +173,11 @@ Local, unversioned changes (`config/user_workflows.json`,
   `drone_exchange_tpl.png` (1.0 on the reference frame, <= 0.69 elsewhere).
 - Verified: offline template scoring only.
 
-### Prestige page scroll position, Drone Points (`65e4ef3`)
+### Prestige page scroll position, Drone Points (`9014f3d`)
 - Documented that the Prestige page keeps its scroll position (the Prestige
   box is at the top) and that Drone Points survive prestige (wiki).
 
-### Freebies close template (`d37898f`)
+### Freebies close template (`e85132e`)
 - Problem: the shop stayed open after a claim; the shipped `close_menu.png`
   scores 0.655-0.71 on this layout.
 - `FREEBIES_CLOSE_TEMPLATE` is configurable (validation, overrides, API,
@@ -177,22 +185,22 @@ Local, unversioned changes (`config/user_workflows.json`,
 - Verified: unit tests; offline, `workflows/menu/close_menu_tpl.png` scores
   1.0 on the stuck frame. Live claim after a restart not yet observed.
 
-### Bomb rotation and obelisk button (`55c3489`, `a12a32f`)
+### Bomb rotation and obelisk button (`0f17022`, `7daae08`)
 - Documented the single 5-round bomb rotation and the fixed-position obelisk
   HUD tap (the button icon changes with every obelisk level).
 
-### Workshop, Lootbug popup, Claim Victory, single instance (`b423cf2`)
+### Workshop, Lootbug popup, Claim Victory, single instance (`3174698`)
 - Smart Craft reads and buys permanent Workshop upgrades (Upgrades first).
 - Lootbug: optional `LOOTBUG_CLOSE_POPUP` taps the popup X after a verified
   Buy; templates `Lootbug/lootbug_free.png`, `lootbug_popup_close.png`.
 - Obelisk: `obelisk/claim_victory_tpl.png` for the post-victory screen.
 - `run_server` refuses to start a second bot when port 6001 is taken.
 
-### Development notes (`8680df4`)
+### Development notes (`e46aed6`)
 - Added [DEVELOPMENT_NOTES.md](DEVELOPMENT_NOTES.md) with verified game facts,
   wiki references, the local workflow setup and verification methods.
 
-### Smart Craft and early-game support (`592fd62`)
+### Smart Craft and early-game support (`40f212d`)
 - New feature Smart Craft: reads bar-cost upgrades, crafts missing bars
   (5x with 1x fallback), buys upgrades; optional floor trips and surplus-ore
   selling. Bar, ore, digit and page templates under `images/smart_craft/`.
