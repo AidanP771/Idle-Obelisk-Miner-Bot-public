@@ -12,6 +12,17 @@ Local, unversioned changes (`config/user_workflows.json`,
 
 ## 2026-11-24
 
+### Docs and working rules (this entry's commit)
+- AGENTS.md: lock-taking features must check the global pause; detect
+  without the lock; workflow edits are validated and dry-run before reload;
+  live checks only by log and screenshots; all JS tests via
+  `node --test tests/*.cjs`; no co-author trailers on fork commits.
+- Lootbug help text in the settings page describes the new flow.
+- Development notes: restart checklist and the obelisk timer analysis (not
+  built: needs its own digit references and a workflow step; the gain is at
+  most about 60 s per 20 min cooldown).
+
+
 ### Workshop costs with a '4' readable; misread diagnostics (`947f573`)
 - Problem: Workshop rows were skipped 248 times ("cost ... unreadable"): the
   third cost column draws the '4' one sub-pixel shifted, which matched no

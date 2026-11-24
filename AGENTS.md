@@ -36,6 +36,7 @@ These instructions apply to the entire project and our ongoing collaboration.
 - Respect configuration order: `config/settings.py`, followed by local overrides from `config/user_settings.json` through `config/user_overrides.py`. Import the settings module instead of copying overridable individual values prematurely.
 - New settings must also be configurable through the WebUI. Check defaults, validation, migration, persistence, and UI together. General settings require a process restart; workflow reloads apply only workflow definitions at execution boundaries.
 - Coordinate game actions through `state.ingame_action_lock`. Preserve documented exceptions and workflow locking and cancellation rules. Do not hold metadata locks during ADB calls or waits.
+- Any feature that takes the action lock for new work must first check `state.automation_paused` (dashboard "Pause after current") and postpone instead. Detect without the lock; a time-critical feature that sees its target should wait for the lock and list itself in `state.workflows_waiting` so Smart Craft yields (see Lootbug).
 - Preserve isolated screenshot slots, atomic publication, image validation, device binding, and age checks. A failed fresh capture must not silently fall back to an old image.
 - ROIs use `(x1, y1, x2, y2)` in screen pixels. Check resolution, game language, and image templates together; automatic adaptation to arbitrary resolutions is not available.
 - A successful ADB click does not confirm an in-game reward. Preserve error propagation and do not increment action counters after failed actions.
@@ -48,9 +49,12 @@ These instructions apply to the entire project and our ongoing collaboration.
   ```text
   python -B -m unittest discover -s tests -v
   node --test tests/test_dashboard_connection.cjs tests/test_dashboard_editors.cjs tests/test_dashboard_gem_stats.cjs
+  node --test tests/*.cjs   # all JavaScript tests, including dashboard status and notices
   ```
 
 - Select checks according to the change scope. For documentation-only changes, content, link, and change review are sufficient. The Windows test configuration is in `.github/workflows/tests.yml`.
+- Workflow edits in `config/user_workflows.json`: back up first, validate with `config.config_workflows.load_workflow_definitions()` and dry-run them through the workflow engine with mocked screens (method in `docs/DEVELOPMENT_NOTES.md`) before `reload_cfg`.
+- Live checks while the bot runs: logs and read-only screenshots (`/api/screenshot`) only; never send own taps or swipes.
 - Do not casually start the bot or perform real game actions for verification. Importing `bot_app.py` can already connect ADB; local startup defaults can enable game actions. Before functional tests, establish the target device, resolution, game language, and flows covered by the task.
 - `TEST-ENVIRONMENT.bat` writes temporary files; `INSTALL-ENVIRONMENT.bat` installs packages; `tools/sync_workflows.py` modifies source code. Use these tools only when their effects belong to the task.
 - At completion, report what changed, which checks actually ran, and any remaining limitations or open points. Simulated tests do not confirm behavior in the real game.
@@ -63,4 +67,4 @@ After every completed task, before reporting back, keep the agent documentation 
 - [docs/DEVELOPMENT_NOTES.md](docs/DEVELOPMENT_NOTES.md): add game facts learned in game, pitfalls, the local workflow table, and open items; remove items that are resolved.
 - Wiki and research: add every wiki page or external source used to the wiki table in the development notes, with what it was used for and the date read. Mark user observations and unverified inferences as such.
 - Update [docs/PROJECT_CONTEXT.md](docs/PROJECT_CONTEXT.md), [README.md](README.md) and this file when behavior, settings, or working rules change.
-- Commit with the code change and push to the fork remote `fork` (<https://github.com/AidanP771/Idle-Obelisk-Miner-Bot-public>), branch `smart-craft-early-game` unless the user names another. Never push local `config/*.json`, secrets, or user-specific data.
+- Commit with the code change and push to the fork remote `fork` (<https://github.com/AidanP771/Idle-Obelisk-Miner-Bot-public>), branch `smart-craft-early-game` unless the user names another. Never push local `config/*.json`, secrets, or user-specific data. Do not add co-author trailers to commits pushed to the fork.
