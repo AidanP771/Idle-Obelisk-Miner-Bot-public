@@ -12,7 +12,7 @@ Local, unversioned changes (`config/user_workflows.json`,
 
 ## 2026-11-24
 
-### Faster screenshots with exec-out (this entry's commit)
+### Faster screenshots with exec-out (`a8837cb`)
 - Each capture used three ADB calls (screencap to the device, pull, rm);
   Smart Craft and workflows take thousands of screenshots per day.
 - New setting `SCREENSHOT_CAPTURE_METHOD` (`exec_out` default, `pull` = old
