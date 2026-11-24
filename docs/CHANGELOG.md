@@ -12,7 +12,7 @@ Local, unversioned changes (`config/user_workflows.json`,
 
 ## 2026-11-24
 
-### Lootbug is taken within seconds (this entry's commit)
+### Lootbug is taken within seconds (`f0e9cea`)
 - Problem: a lootbug stayed on screen for minutes although the run needs three
   taps. Scans ran every 180 s; a seen lootbug needed the action lock and only
   retried every 15 s, losing to bombs and Smart Craft (255 postpones in one
