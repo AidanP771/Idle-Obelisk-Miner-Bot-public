@@ -12,7 +12,7 @@ Local, unversioned changes (`config/user_workflows.json`,
 
 ## 2026-11-24
 
-### Drone point check, floor Auto guard, 5 min skip (this entry's commit)
+### Drone point check, floor Auto guard, 5 min skip (`4e7ac55`)
 - Bars without a Craft row are skipped for 5 min instead of 30 (user: new
   ores unlock often).
 - New workflow step `read_number` (validation, editor, tests): read digits in
