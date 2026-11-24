@@ -12,7 +12,7 @@ Local, unversioned changes (`config/user_workflows.json`,
 
 ## 2026-11-24
 
-### Audit phase 2: reliability and logs (this entry's commit)
+### Audit phase 2: reliability and logs (`1f89f2f`)
 - `_craft_ready` needs a 1x/5x quantity button and no Workshop header; it
   accepted Workshop frames before (the Workshop's third cost column has bar
   icons in the Craft icon column), a risk with the new page polling. Saved
