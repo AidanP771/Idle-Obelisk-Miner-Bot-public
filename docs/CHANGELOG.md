@@ -12,6 +12,13 @@ Local, unversioned changes (`config/user_workflows.json`,
 
 ## 2026-11-25
 
+### Items research (docs only, this entry's commit)
+- User: the automation does not use items. Read the wiki (Items, Chests,
+  Store) and captured the Chests, Relics and item bag screens with the user
+  (they opened 146 item chests and 71 relic chests by hand; two Bread uses
+  showed that uses add time). Facts and the user's usage policy are in the
+  development notes; reference frames in `tests/data/items/`. No code yet.
+
 ### Bomb rotation drains the Basic bomb (`f0faca7`)
 - Bug (user report: the first bomb in the line is not used up): the rotation
   fired Basic once per run; Basic gains about one charge per 30 s, so it sat
