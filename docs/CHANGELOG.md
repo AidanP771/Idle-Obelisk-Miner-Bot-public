@@ -12,7 +12,7 @@ Local, unversioned changes (`config/user_workflows.json`,
 
 ## 2026-11-25
 
-### Bomb rotation drains the Basic bomb (this entry's commit)
+### Bomb rotation drains the Basic bomb (`f0faca7`)
 - Bug (user report: the first bomb in the line is not used up): the rotation
   fired Basic once per run; Basic gains about one charge per 30 s, so it sat
   at 4-5 of 5 and its recharge time was wasted.
