@@ -865,7 +865,20 @@ def _craft_target_mode():
     return mode if mode in ("next", "all") else "next"
 
 
-def compute_shortfalls(rows, mode=None):
+# Upgrade Pickaxe is the only row of the "All Worlds Upgrade" section at the
+# top of the Upgrades list (cost icon at y about 397 with the list at the top;
+# the "World 1 Upgrades" header follows at about y 540). Pickaxe damage drives
+# almost everything else, so its bar need is crafted for first.
+_PICKAXE_MAX_Y = 480
+
+
+def pickaxe_row(upgrade_rows):
+    """The Upgrade Pickaxe cost (bar, have, need, y) from scan_upgrades rows, or None."""
+    top = min(upgrade_rows, key=lambda r: r[3], default=None)
+    return top if top is not None and top[3] < _PICKAXE_MAX_Y else None
+
+
+def compute_shortfalls(rows, mode=None, priority=None):
     """rows: [(bar, have, need, y)] -> {bar: (have, target)} for bars still missing.
     mode "next" (SMART_CRAFT_CRAFT_TARGET default): target = the cheapest need
     per bar that is not met yet, i.e. enough for the next purchase that still
@@ -873,7 +886,10 @@ def compute_shortfalls(rows, mode=None):
     already met does not count: a cheap row that waits for another bar (Pickaxe
     Crit Chance: tin 0/2 + copper 10/2) must not hide a dearer one (Upgrade
     Pickaxe copper 10/15). Mode "all": target = sum of all rows' needs (crafts
-    every bar the visible upgrades will ever need, usually all ore)."""
+    every bar the visible upgrades will ever need, usually all ore).
+    `priority` (the Upgrade Pickaxe row) raises its bar's "next" target to its
+    own need, so cheaper rows of the same bar no longer make it wait a round
+    (or a whole cycle) per cheap purchase."""
     mode = mode or _craft_target_mode()
     result = {}
     for bar in sorted({r[0] for r in rows}):
@@ -883,6 +899,8 @@ def compute_shortfalls(rows, mode=None):
         if mode == "next":
             unmet = [n for n in needs if n > have]
             target = min(unmet) if unmet else have
+            if priority and priority[0] == bar and priority[2] > target:
+                target = priority[2]
         else:
             target = sum(needs)
         if target > have:
@@ -1114,8 +1132,11 @@ def buy_upgrades(generation):
                     if have >= need and not lit:
                         _log(f"[SMART_CRAFT] {bar} {have}/{need} at y={y} is met but Buy is not lit "
                              f"(another cost of the row is missing) -> not buying")
-            targets = [r for r in rows
-                       if r[6] and r[1] >= r[2] and not any(abs(r[3] - y) < 5 for y in skipped)]
+            # Top-down, so Upgrade Pickaxe (first row) is bought before a cheaper
+            # row of the same bar spends the bars crafted for it.
+            targets = sorted((r for r in rows
+                              if r[6] and r[1] >= r[2] and not any(abs(r[3] - y) < 5 for y in skipped)),
+                             key=lambda r: r[3])
             if not targets:
                 break
             bar, have, need, y, bx, by, _affordable = targets[0]
@@ -1170,6 +1191,7 @@ _AUTO_OFFSET_Y = 209                        # floor Auto toggle below the panel 
 
 _trip = None   # {"origin", "floor", "until", "auto_was_on"} while on a lower floor
 _ore_missing = {}   # bar -> ore still needed, from the last craft round
+_pickaxe_bar = None  # bar the Upgrade Pickaxe still lacks (last round), for floor trips
 # A trip survives a bot restart so the bot still returns to the origin floor.
 _TRIP_FILE = Path(__file__).resolve().parent.parent / "smart_craft_trip.json"
 
@@ -1551,6 +1573,7 @@ def _unlock_rows(names, generation):
 
 def run_cycle(generation=None) -> str:
     """Caller owns the action lock. Returns ok | sold_only | nothing_needed | error | cancelled."""
+    global _pickaxe_bar
     generation = _run_generation if generation is None else generation
     crafted = bought = 0
     first_summary = None
@@ -1562,6 +1585,7 @@ def run_cycle(generation=None) -> str:
             _yield_point(generation)
             img, gray = _open_page("upgrades_tpl", _upgrades_ready, "Upgrades", generation)
             rows = scan_upgrades(img, gray, generation)
+            pickaxe = pickaxe_row(rows)
             workshop = getattr(s, "SMART_CRAFT_WORKSHOP", True)
             if workshop:
                 _yield_point(generation)
@@ -1570,7 +1594,11 @@ def run_cycle(generation=None) -> str:
                 ws_rows = scan_workshop(img, gray, generation)
                 _log(f"[SMART_CRAFT] Workshop: {len({r[3] for r in ws_rows})} buyable row(s)")
                 rows = rows + ws_rows
-            shortfalls = compute_shortfalls(rows)
+            shortfalls = compute_shortfalls(rows, priority=pickaxe)
+            _pickaxe_bar = pickaxe[0] if pickaxe and pickaxe[0] in shortfalls else None
+            if _pickaxe_bar:
+                _log(f"[SMART_CRAFT] Upgrade Pickaxe needs {pickaxe[0]} {pickaxe[1]}/{pickaxe[2]} -> crafted for first")
+                shortfalls = {_pickaxe_bar: shortfalls[_pickaxe_bar], **shortfalls}
             not_craftable = _skip_without_craft_row(shortfalls)
             if not_craftable:
                 _log(f"[SMART_CRAFT] no Craft row yet (skipped): {', '.join(not_craftable)}")
@@ -1611,7 +1639,10 @@ def run_cycle(generation=None) -> str:
         if sold:
             state.smart_craft_last_status += f"; sold ore: {', '.join(sold)}"
         _close_menu()
-        _floor_step(dict(_ore_missing))
+        missing = dict(_ore_missing)
+        if _pickaxe_bar in missing:
+            missing = {_pickaxe_bar: missing[_pickaxe_bar]}   # the trip mines for the pickaxe first
+        _floor_step(missing)
         if _trip:
             state.smart_craft_last_status += (f"; mining on floor {_trip['floor']} "
                                               f"(from {_trip['origin']})")

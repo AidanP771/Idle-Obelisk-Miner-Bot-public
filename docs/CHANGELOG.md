@@ -12,6 +12,21 @@ Local, unversioned changes (`config/user_workflows.json`,
 
 ## 2026-11-25
 
+### Upgrade Pickaxe gets priority in Smart Craft (COMMIT)
+- User report: the pickaxe is upgraded slowly, and pickaxe damage drives
+  almost everything else. Log since the 07:35 prestige: level 2 -> 3 (copper
+  15) waited 17-30 min with 500-900 copper ore in stock, because `next` mode
+  crafted copper only for the cheaper rows (2, 4, 8, 10, 12, 14), one purchase
+  per round or cycle, and rows were bought in icon order, not top-down.
+  Level 9 -> 10 (runite 50) waited 55 min: runite ore was short and the floor
+  trips went for the larger citrine and adamant shortages.
+- Now the Upgrade Pickaxe row (top of the Upgrades list) sets its bar's craft
+  target to its own need, that bar is crafted first, Upgrades rows are bought
+  top-down (pickaxe first), and while the pickaxe lacks ore a floor trip mines
+  only that ore.
+- Verified: 343 Python tests (new: pickaxe target, crafting order and floor-trip
+  ore, top-down buying). Needs a restart; not yet seen live.
+
 ### Infinity Bomb in the bomb rotation (local workflow only)
 - User report: a new bomb in the bomb panel was never used. It is the purple
   Infinity Bomb in slot 5 (Workshop unlock, full at 5 charges). The existing

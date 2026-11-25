@@ -119,6 +119,19 @@ class ReadingTests(SmartCraftBase):
         met = [("copper", 20, 15, 397), ("copper", 20, 2, 844)]
         self.assertEqual(self.feature.compute_shortfalls(met), {})
 
+    def test_pickaxe_need_is_the_target_for_its_bar(self):
+        # 2026-11-25 live: Upgrade Pickaxe copper 15 waited while "next" crafted copper
+        # for the cheaper rows (2, 4, 8, 10, 12, 14), one purchase per round or cycle.
+        rows = [("copper", 4, 15, 397), ("copper", 4, 10, 844), ("adamant", 0, 8, 1300),
+                ("adamant", 0, 40, 1500)]
+        pickaxe = self.feature.pickaxe_row(rows)
+        self.assertEqual(pickaxe, ("copper", 4, 15, 397))
+        self.assertEqual(self.feature.compute_shortfalls(rows, priority=pickaxe),
+                         {"adamant": (0, 8), "copper": (4, 15)})
+        self.assertEqual(self.feature.compute_shortfalls(rows), {"adamant": (0, 8), "copper": (4, 10)})
+        self.assertIsNone(self.feature.pickaxe_row([("copper", 4, 10, 844)]))   # pickaxe row not read
+        self.assertIsNone(self.feature.pickaxe_row([]))
+
     def test_scroll_to_top_starts_with_one_fast_fling(self):
         scroll = self.feature.scroll
         scroll.reset_mock()
@@ -349,6 +362,15 @@ class BuyTests(SmartCraftBase):
         self.assertEqual(self.state.smart_craft_upgrades_bought, 2)
         self.assertEqual([c.args[:2] for c in self.feature.tap.call_args_list], [(760, 400), (760, 1200)])
 
+    def test_rows_are_bought_top_down_so_the_pickaxe_goes_first(self):
+        # 2026-11-25 live: rows were bought in icon order (y=843 before y=397), so a
+        # cheap copper row could spend the copper crafted for Upgrade Pickaxe.
+        cheap = ("copper", 15, 2, 844, 760, 844, True)
+        pickaxe = ("copper", 15, 15, 397, 760, 400, True)
+        self.feature.read_upgrade_rows = Mock(side_effect=[[cheap, pickaxe], [cheap], [], []])
+        self.feature.buy_upgrades(self.feature._run_generation)
+        self.assertEqual(self.feature.tap.call_args_list[0].args[:2], (760, 400))
+
     def test_purchase_without_visible_effect_is_not_counted(self):
         row = ("adamant", 43, 35, 397, 760, 400, True)
         self.feature.read_upgrade_rows = Mock(return_value=[row])
@@ -464,6 +486,19 @@ class RoundTests(SmartCraftBase):
         self.assertEqual(f.buy_upgrades.call_count, 3)
         self.assertEqual(f.craft_bar.call_count, 3)
         self.assertIn("crafted 15 bar(s), bought 2", self.state.smart_craft_last_status)
+
+    def test_pickaxe_bar_is_crafted_first_and_drives_the_floor_trip(self):
+        f = self.feature
+        f._floor_step = Mock()
+        f.scan_upgrades = Mock(return_value=[("runite", 12, 50, 397), ("adamant", 27, 64, 900),
+                                             ("runite", 12, 20, 1100)])
+        f.buy_upgrades = Mock(return_value=0)
+        f.craft_bar = Mock(side_effect=lambda bar, have, target, gen, q: f._ore_missing.update(
+            {bar: 300 if bar == "runite" else 900}) or 0)
+        f.run_cycle()
+        calls = [(c.args[0], c.args[2]) for c in f.craft_bar.call_args_list]
+        self.assertEqual(calls, [("runite", 50), ("adamant", 64)])
+        f._floor_step.assert_called_once_with({"runite": 300})   # not the larger adamant shortage
 
     def test_round_limit_and_nothing_needed(self):
         f = self.feature

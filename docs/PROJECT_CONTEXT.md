@@ -197,7 +197,11 @@ lazy imports to avoid circular imports. Level detection writes
   the cheapest need that is not met yet (enough for the next purchase that
   still lacks this bar; met needs are ignored, since 2026-11-25, so a cheap row
   waiting for another bar cannot hide a dearer one; the following round
-  crafts for the next one), `all` = the sum of all needs (before 2026-11-24
+  crafts for the next one; since 2026-11-25 the Upgrade Pickaxe row, the only
+  row above y 480 with the list at the top, raises its bar's target to its own
+  need, that bar is crafted first, rows are bought top-down so the pickaxe
+  goes first, and a floor trip mines only the pickaxe's ore while it lacks
+  one), `all` = the sum of all needs (before 2026-11-24
   the only mode; it usually turns all ore into bars). Rows with two costs (two bars, or
   bar + gold per the game wiki) are read up to the next cost icon (bar
   templates plus `images/smart_craft/coin.png`). Craft page: switch to 5x
