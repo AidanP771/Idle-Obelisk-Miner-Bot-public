@@ -12,7 +12,7 @@ Local, unversioned changes (`config/user_workflows.json`,
 
 ## 2026-11-25
 
-### Items feature: bag rules, chests and relics, use_items step (this entry's commit)
+### Items feature: bag rules, chests and relics, use_items step (`f896e5b`)
 - User request: the automation never used items; also open chests and relics
   and keep a record of items. Wiki (Items, Chests) and live frames (captured
   with the user) are in the development notes.
