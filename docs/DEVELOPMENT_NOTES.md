@@ -133,6 +133,8 @@ Timing (2026-11-24): a lootbug could stay on screen for minutes. Scans ran only 
 - A plain `adb shell input tap` on Claim Victory was ignored; a short press
   (the bot's tapper, or a 90 ms swipe) works.
 
+- The Fight tab shows "Pickaxe Damage N" top right (red when below the armor) and the obelisk stats (Obelisk 5: Hp 2.15m/6.14m, Armor 614, Fight Duration 0:34 on 2026-11-25, player level 48 after a prestige, pickaxe damage 253; frame `tests/data/items/obelisk_damage_warning.png`). Reading both numbers would let the bot try items only when they can lift the damage over the armor (not built; how item bonuses combine with the base damage is unknown).
+
 ### Prestige
 - Prestige page: "Earn Prestige Points (PP) at level 20+"; shows the PP gain.
   The HUD top-left shows `PP(+gain)`.
