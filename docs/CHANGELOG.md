@@ -12,7 +12,7 @@ Local, unversioned changes (`config/user_workflows.json`,
 
 ## 2026-11-25
 
-### Items research (docs only, this entry's commit)
+### Items research (docs only, `c6b20d2`)
 - User: the automation does not use items. Read the wiki (Items, Chests,
   Store) and captured the Chests, Relics and item bag screens with the user
   (they opened 146 item chests and 71 relic chests by hand; two Bread uses
