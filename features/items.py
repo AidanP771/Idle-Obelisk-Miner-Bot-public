@@ -109,6 +109,8 @@ _templates = {}        # key -> gray template
 _digits = {}           # "0".."9" -> gray reference cell (19 x 11)
 _next_check = {}       # key -> earliest time worth opening the bag for it again
 _blocked_until = {}    # item_cooldown key -> time
+_key_used_ts = {}      # cooldown_key -> last time use_items used an item for it
+_BLOCK_WINDOW_S = 300.0  # item_cooldown only blocks after a real use this recently
 _last_chests_ts = 0.0
 _record_lock = threading.Lock()
 _thread = None
@@ -399,6 +401,8 @@ def use_items(keys, reserve=0, reason="workflow", cooldown_key=None) -> list:
     try:
         img, gray = _open_bag()
         used, bag = _run_uses(keys, int(reserve), reason, img, gray)
+        if used and cooldown_key:
+            _key_used_ts[cooldown_key] = time.time()
         _record_snapshot(bag)
         return used
     except _Abort as exc:
@@ -408,10 +412,18 @@ def use_items(keys, reserve=0, reason="workflow", cooldown_key=None) -> list:
         _close_bag()
 
 
-def block(key, seconds):
-    """item_cooldown step: no use_items with this cooldown_key for `seconds`."""
-    _blocked_until[str(key)] = time.time() + max(0.0, float(seconds))
+def block(key, seconds) -> bool:
+    """item_cooldown step: no use_items with this cooldown_key for `seconds`,
+    but only when that key's items were really used just before (the attempt
+    happened). Without a recent use (items off, none held, still running from
+    an earlier use) nothing is blocked. Returns True when blocked."""
+    key = str(key)
+    if time.time() - _key_used_ts.get(key, -1e18) > _BLOCK_WINDOW_S:
+        _log(f"[ITEMS] no items used for '{key}' just before -> not blocked")
+        return False
+    _blocked_until[key] = time.time() + max(0.0, float(seconds))
     _log(f"[ITEMS] items for '{key}' blocked for {float(seconds):.0f}s")
+    return True
 
 
 # ============================================================

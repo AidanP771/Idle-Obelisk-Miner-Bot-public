@@ -12,6 +12,15 @@ Local, unversioned changes (`config/user_workflows.json`,
 
 ## 2026-11-25
 
+### item_cooldown blocks only after a real item use (this entry's commit)
+- Live after the restart (06:46): `ITEMS_ENABLED` was saved at 06:47, after the
+  start, so items stayed off (settings need a restart). The obelisk showed the
+  damage warning at 06:47 and 07:03, and `item_cooldown obelisk 7200` blocked
+  the pickaxe items for 2 h although none had been used.
+- `items.block` now blocks only when a `use_items` step with that cooldown key
+  used an item in the last 5 min; otherwise it logs "no recent use, not
+  blocked". Verified: 340 Python tests. Needs a restart.
+
 ### Items feature: bag rules, chests and relics, use_items step (`f896e5b`)
 - User request: the automation never used items; also open chests and relics
   and keep a record of items. Wiki (Items, Chests) and live frames (captured

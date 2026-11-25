@@ -449,10 +449,12 @@ def _step_use_items(step: dict, wf: dict) -> bool:
 
 
 def _step_item_cooldown(step: dict, wf: dict) -> bool:
-    """Block `use_items` steps with this cooldown_key for `seconds`."""
+    """Block `use_items` steps with this cooldown_key for `seconds`, when such a
+    step used an item in the last few minutes (the attempt really happened)."""
     from features import items
-    items.block(str(step.get("key", "")), float(step.get("seconds", 0.0)))
-    _log_step(f"[WF] item_cooldown {step.get('key')}: {float(step.get('seconds', 0.0)):.0f}s", wf)
+    blocked = items.block(str(step.get("key", "")), float(step.get("seconds", 0.0)))
+    _log_step(f"[WF] item_cooldown {step.get('key')}: "
+              + (f"{float(step.get('seconds', 0.0)):.0f}s" if blocked else "no recent use, not blocked"), wf)
     return True
 
 

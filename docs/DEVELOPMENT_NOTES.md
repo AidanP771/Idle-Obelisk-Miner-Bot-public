@@ -213,6 +213,7 @@ Pitfalls:
 - An aborted workflow leaves its menu open; every later HUD-based workflow then silently matches nothing (2026-11-24: the Drones menu stayed open after each failed prestige until Smart Craft closed it). Close the menu before a deliberate abort, and let a frequent workflow close leftover menus first.
 - A deliberate abort without nested `if`: an optional click, then `if last_step_failed` -> close menu + a non-optional click on the same missing template.
 - Before `reload_cfg`, validate an edited `user_workflows.json` with `config.config_workflows.load_workflow_definitions()` (it rejected nested `if` blocks that the JSON itself allowed) and dry-run it through the engine with mocked screens (see Verification Methods).
+- Settings changed in the WebUI apply only after the next restart: on 2026-11-25 `ITEMS_ENABLED` was saved a minute after a restart and stayed off (`[ITEMS] armed (... enabled=False)`, `use_items: ITEMS_ENABLED is off`).
 - Offline scripts that call Smart Craft readers with the real settings must disable `_debug_dump` (`sc._debug_dump = lambda *a, **k: None`); otherwise they write into `temp/smart_craft_debug/` and rotate the real dumps out (happened 2026-11-24 13:13).
 - Workflow matching is grayscale; a step cannot tell a green toggle from a red one (a 1x/5x button matched both states at 0.95+).
 

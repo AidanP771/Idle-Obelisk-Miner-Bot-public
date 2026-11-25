@@ -118,8 +118,10 @@ class UseRuleTests(ItemsBase):
         self.assertEqual(self.m._use_one.call_count, 1)
 
     def test_use_items_respects_cooldown_and_due_times(self):
+        self.assertFalse(self.m.block("obelisk", 7200))           # no use for the key yet: no block
+        self.m._key_used_ts["obelisk"] = 990.0                    # used 10 s ago (fake clock at 1000)
+        self.assertTrue(self.m.block("obelisk", 7200))
         self.m._open_bag = Mock(side_effect=AssertionError("bag must not open"))
-        self.m.block("obelisk", 7200)
         self.assertEqual(self.m.use_items(["primal_meat"], cooldown_key="obelisk"), [])
         self.m._next_check["rock_cake"] = 5000.0                 # used recently: not due
         self.assertEqual(self.m.use_items(["rock_cake"]), [])
