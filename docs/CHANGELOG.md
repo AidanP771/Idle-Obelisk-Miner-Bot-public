@@ -12,6 +12,19 @@ Local, unversioned changes (`config/user_workflows.json`,
 
 ## 2026-11-25
 
+### Infinity Bomb in the bomb rotation (local workflow only)
+- User report: a new bomb in the bomb panel was never used. It is the purple
+  Infinity Bomb in slot 5 (Workshop unlock, full at 5 charges). The existing
+  template `bomb_interface/infinity_bomb_tpl` matches it at 0.998.
+- Wiki (Bombs, re-read): each Infinity Bomb fired adds a damage multiplier;
+  base recharge 160 s. `bomb_rotation_early_game` now fires it after Exp and
+  Plenty (rocks marked first) and before Basic and Chain, and drains it like
+  Basic (until slot 5 shows "0", at most 5 shots).
+- Verified: workflow validation, engine dry run with mocked screens (1, 3, 5
+  and 9 charges; Basic/Chain unchanged), the slot-5 count ROI on a live frame
+  (zeros in slots 1, 3, 4 score 1.0 on the same 90 px pitch); reloaded live
+  (`reload_cfg`). Live: 09:49 five shots from a full slot, 09:51 the slot read "0" and the drain steps skipped. The multiplier itself is not visible to the bot.
+
 ### item_cooldown blocks only after a real item use (`28cbb85`)
 - Live after the restart (06:46): `ITEMS_ENABLED` was saved at 06:47, after the
   start, so items stayed off (settings need a restart). The obelisk showed the
@@ -387,3 +400,4 @@ Backups of each step are kept in the session scratchpad, not in the repo.
 | 2026-11-24 | `user_settings.json` | `SMART_CRAFT_BUY_GOLD_UPGRADES` true (set by the user in the WebUI; gold rows are bought with the bar upgrades). |
 | 2026-11-25 | `user_workflows.json` | `bomb_rotation_early_game`: four `if template_not_visible(count_zero_tpl)` drain steps after Basic (wait 2.4 s + Fire); reloaded live 06:00. Backup before the edit in the session scratchpad. |
 | 2026-11-25 | `user_workflows.json` | `obelisk_fight`: `use_items` pickaxe items (cooldown key `obelisk`) before the fight; `obelisk_fight_attack` damage-warning branch: `item_cooldown obelisk 7200`; `bomb_rotation_early_game`: `use_items chaos_totem` (reserve 2). Inactive until `ITEMS_ENABLED`; needs the restart that brings the new step types. Backup in the session scratchpad. |
+| 2026-11-25 | `user_workflows.json` | `bomb_rotation_early_game`: Infinity Bomb (select + Fire) after Plenty, plus four drain steps on the slot-5 count (ROI [510,1245,550,1285]); reloaded live. Backup in the session scratchpad. |
