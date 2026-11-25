@@ -10,6 +10,28 @@ the changes are in [DEVELOPMENT_NOTES.md](DEVELOPMENT_NOTES.md); behavior is in
 Local, unversioned changes (`config/user_workflows.json`,
 `config/user_settings.json`) are listed separately because git ignores them.
 
+## 2026-11-25
+
+### Pickaxe upgrade never crafted for; faster scroll to the list top (this entry's commit)
+- Bug (user report: the pickaxe is not upgraded): live frame of the Upgrades
+  top showed Upgrade Pickaxe copper 10/15 and Pickaxe Crit Chance tin 0/2 +
+  copper 10/2. Two faults together: the tin icon (x=158) was left of the cost
+  search area (x from 180), so Crit Chance looked like "copper 10/2"; and
+  `next` mode targeted the cheapest copper need (2, already met), so copper was
+  never crafted for the pickaxe's 15. Crit Chance's Buy stayed dark (tin), and
+  the buy step skipped it without a log line.
+- `compute_shortfalls` `next`: per bar the cheapest need that is not met yet.
+  Cost area from x=150. The buy step logs a met row whose Buy is dark.
+- Navigation: the game keeps each list's scroll position, so every page
+  opening needed 3-5 slow drags to the top (about 50-60 s per cycle). The first
+  drag to the top is now one fast 1100 px drag; normal drags only confirm.
+- Workshop checked: buying works live (levels 0 -> 1 -> 2, confirmed by the
+  level box).
+- Verified: 328 Python and 27 JS tests (real frame of the two-cost row; met
+  needs ignored; fling first). 251 saved frames: no other read changed. Not
+  verified live (needs a restart); the fling's effect on the game's list is
+  unobserved.
+
 ## 2026-11-24
 
 ### Smart Craft purchase check by level counter; buy step no longer stops at one row (`0a6d592`)

@@ -111,6 +111,42 @@ class ReadingTests(SmartCraftBase):
         self.settings.SMART_CRAFT_CRAFT_TARGET = "all"
         self.assertEqual(self.feature.compute_shortfalls(rows), {"adamant": (0, 43)})
 
+    def test_next_target_ignores_needs_that_are_already_met(self):
+        # 2026-11-25 live: Upgrade Pickaxe copper 10/15; Pickaxe Crit Chance tin 0/2 +
+        # copper 10/2. The met copper 2 hid the pickaxe's 15, so copper was never crafted.
+        rows = [("copper", 10, 15, 397), ("tin", 0, 2, 844), ("copper", 10, 2, 844)]
+        self.assertEqual(self.feature.compute_shortfalls(rows), {"copper": (10, 15), "tin": (0, 2)})
+        met = [("copper", 20, 15, 397), ("copper", 20, 2, 844)]
+        self.assertEqual(self.feature.compute_shortfalls(met), {})
+
+    def test_scroll_to_top_starts_with_one_fast_fling(self):
+        scroll = self.feature.scroll
+        scroll.reset_mock()
+        self.feature._fresh = Mock(return_value=(None, None))
+        self.feature.list_shift = Mock(side_effect=[None, 0])   # fling moved the list, the next drag did not
+        self.feature._scroll_to_top(None, None, self.feature._run_generation)
+        self.assertEqual(scroll.call_count, 2)
+        self.assertEqual(scroll.call_args_list[0].kwargs["distance"], self.feature._TOP_FLING_PX)
+        self.assertEqual(scroll.call_args_list[0].kwargs["duration_ms"], self.feature._TOP_FLING_MS)
+        self.assertNotEqual(scroll.call_args_list[1].kwargs["distance"], self.feature._TOP_FLING_PX)
+
+
+class PickaxeRowTests(SmartCraftBase):
+    def test_two_cost_row_reads_its_first_icon_and_pickaxe_copper_is_missing(self):
+        """Live frame 2026-11-25: Upgrade Pickaxe copper 10/15 and Pickaxe Crit
+        Chance tin 0/2 + copper 10/2. The tin icon (x=158) was outside the cost
+        area (x from 180), and the met copper 2 hid the pickaxe's copper 15."""
+        import cv2
+        from core.vision import find_template
+        self.feature.find_template = find_template
+        img = cv2.imread(str(ROOT / "tests/data/smart_craft/upgrades_pickaxe_two_costs.png"))
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        rows = self.feature.read_upgrade_rows(img, gray, with_buttons=True)
+        self.assertEqual([(r[0], r[1], r[2], r[6]) for r in rows],
+                         [("copper", 10, 15, False), ("tin", 0, 2, False), ("copper", 10, 2, False)])
+        found = [r[:4] for r in rows]
+        self.assertEqual(self.feature.compute_shortfalls(found), {"copper": (10, 15), "tin": (0, 2)})
+
 
 class RealCropTests(SmartCraftBase):
     """Crops from a live Workshop frame (2026-11-24) that were unreadable before

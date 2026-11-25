@@ -64,7 +64,8 @@ _BOX_BG = np.array([24, 20, 8])
 _MENU_ROI = (10, 769, 890, 1579)
 _CLOSE_ROI = (430, 1450, 670, 1575)
 _BUY_ALL_ROI = (560, 1380, 890, 1485)
-_UPGRADE_ICON_X = (180, 640)          # cost area between the row icon and the Buy button
+_UPGRADE_ICON_X = (150, 640)          # cost area between the row icon and the Buy button
+                                      # (two-cost rows start their first icon at x=158)
 _UPGRADE_TEXT = (50, 10, 330, 50)      # "have/need" right of the icon (x2 capped by the next icon)
 _UPGRADE_BUY = (640, -50, 850, 40)     # Buy button: absolute x range, y relative to the icon
 _QTY_ROI = (20, 1380, 420, 1480)      # Craft page quantity buttons (1x / 5x)
@@ -658,10 +659,22 @@ def _scroll_list(direction):
     _delay()
 
 
+# The game keeps each list's scroll position, so a page usually opens where the
+# last pass left it (2-3 pages down: 3-5 slow drags, about 2.5 s each). One long
+# fast drag (momentum) first; the normal drags then only confirm the top.
+_TOP_FLING_PX = 1100
+_TOP_FLING_MS = 300
+
+
 def _scroll_to_top(img, gray, generation):
-    for _ in range(int(getattr(s, "SMART_CRAFT_MAX_SCROLL_PAGES", 6)) + 2):
+    for attempt in range(int(getattr(s, "SMART_CRAFT_MAX_SCROLL_PAGES", 6)) + 2):
         _check_cancel(generation)
-        _scroll_list("down")
+        if attempt == 0:
+            if not scroll("down", area=_list_roi(), distance=_TOP_FLING_PX, duration_ms=_TOP_FLING_MS):
+                raise _Abort("scroll failed")
+            _delay()
+        else:
+            _scroll_list("down")
         new_img, new_gray = _fresh()
         shift = list_shift(gray, new_gray, content_up=False)
         img, gray = new_img, new_gray
@@ -854,17 +867,24 @@ def _craft_target_mode():
 
 def compute_shortfalls(rows, mode=None):
     """rows: [(bar, have, need, y)] -> {bar: (have, target)} for bars still missing.
-    mode "next" (SMART_CRAFT_CRAFT_TARGET default): target = the cheapest row's
-    need per bar, i.e. enough for the next purchase; the next round crafts for
-    the following one. Mode "all": target = sum of all rows' needs (crafts every
-    bar the visible upgrades will ever need, usually all ore)."""
+    mode "next" (SMART_CRAFT_CRAFT_TARGET default): target = the cheapest need
+    per bar that is not met yet, i.e. enough for the next purchase that still
+    lacks this bar; the next round crafts for the following one. A need that is
+    already met does not count: a cheap row that waits for another bar (Pickaxe
+    Crit Chance: tin 0/2 + copper 10/2) must not hide a dearer one (Upgrade
+    Pickaxe copper 10/15). Mode "all": target = sum of all rows' needs (crafts
+    every bar the visible upgrades will ever need, usually all ore)."""
     mode = mode or _craft_target_mode()
     result = {}
     for bar in sorted({r[0] for r in rows}):
         mine = [r for r in rows if r[0] == bar]
         have = max(r[1] for r in mine)
         needs = [r[2] for r in mine]
-        target = min(needs) if mode == "next" else sum(needs)
+        if mode == "next":
+            unmet = [n for n in needs if n > have]
+            target = min(unmet) if unmet else have
+        else:
+            target = sum(needs)
         if target > have:
             result[bar] = (have, target)
     return result
@@ -1084,9 +1104,17 @@ def buy_upgrades(generation):
     bought = 0
     for img, gray, _offset in list_pages(img, gray, generation):
         skipped = []
+        first_read = True
         while bought < limit:
             _check_cancel(generation)
-            targets = [r for r in read_upgrade_rows(img, gray, with_buttons=True)
+            rows = read_upgrade_rows(img, gray, with_buttons=True)
+            if first_read:
+                first_read = False
+                for bar, have, need, y, _bx, _by, lit in rows:
+                    if have >= need and not lit:
+                        _log(f"[SMART_CRAFT] {bar} {have}/{need} at y={y} is met but Buy is not lit "
+                             f"(another cost of the row is missing) -> not buying")
+            targets = [r for r in rows
                        if r[6] and r[1] >= r[2] and not any(abs(r[3] - y) < 5 for y in skipped)]
             if not targets:
                 break

@@ -54,6 +54,9 @@ Measured at 900 x 1600, English UI. Coordinates are full-resolution pixels.
   measurement treats them as ambiguous ("list position unknown"), which ends
   the scan correctly.
 
+- Two-cost Upgrades rows exist (2026-11-25 live: Pickaxe Crit Chance tin 0/2 + copper 10/2); their first cost icon starts at x=158, left of the single-cost icon (x=340). The cost-icon search area therefore starts at x=150 (was 180, which missed the tin cost). On 251 saved frames the wider area changed no other read.
+- "Upgrade Pickaxe" (All Worlds Upgrade, first row of the list) changes its bar type with its level: adamant (11-22), Demonite 28/95 (2026-11-23), copper 10/15 at level 2/171 after the prestige (2026-11-25). Upgrades-page "Pickaxe Damage" rows were all Maxed then, so this row is the remaining pickaxe damage source.
+- 2026-11-25: the pickaxe was not upgraded for hours: `next` mode took the cheapest copper need (Crit Chance's 2, met with 10) and ignored the pickaxe's 15, and Crit Chance itself waited for the unseen tin. Fixed: unmet needs only, wider cost area.
 - Each Upgrades row costs either bars or gold (coin icon, e.g. Pickaxe Crit Damage 0/60, Free Bomb Chance 0/80); no row with both was seen on 30 saved rows (2026-11-24). Gold rows have the same Buy button (bright red = affordable).
 
 - Level boxes: Upgrades rows show "level/max" (e.g. 5/10, 6/171) above the right end of the row, 82-90 px above the cost icon top, x 690-830; rows at level 0 show no box. Workshop rows always show one (0/1, 2/4), 84-92 px above. Read by the Smart Craft glyph reader (2026-11-24 frames).
@@ -235,8 +238,9 @@ Pitfalls:
 - `SMART_CRAFT_CRAFT_TARGET = next` (2026-11-24): compare cycle length and purchases per cycle with the old `all` behaviour (2026-11-24 morning: 250-360 s per cycle, 2179 bars for 38 purchases).
 - Floor trips: no trip has run yet (trip start/end now log planned and real duration). Every attempt since at least 2026-11-24 08:00 moved 19 -> 11 and back within 7 s (Auto unreadable) and left Auto off; fixed in code, needs a restart and a live trip.
 - Surplus-ore selling: full sequence not yet run in game.
-- Gold upgrades (`SMART_CRAFT_BUY_GOLD_UPGRADES`, off by default, on locally): a lit gold Buy was tapped live (2026-11-24 12:51, y=672), but the old check could not confirm it; a confirmed gold purchase is not yet seen (level-counter check needs the restart).
-- Workshop buying is not yet observed live (bars were 0 after the prestige).
+- Gold upgrades (`SMART_CRAFT_BUY_GOLD_UPGRADES`, off by default, on locally): confirmed live 2026-11-25 03:04 (about 25 purchases, level 4 -> 9 etc.). They spend all gold (4 left afterwards), so drone points (about 302 gold each) wait; consider whether gold should be kept for drone points.
+- Pickaxe fix and fast scroll-to-top (2026-11-25): needs a restart. Watch for `copper` in `missing:`, a Craft of copper (copper ore comes from floors 1-4: a floor trip), `bought upgrade ... (copper ...)`, and fewer `[SCROLL] down` lines per page opening (2 instead of 3-5).
+- Workshop buying confirmed live 2026-11-25 (level 0 -> 1 at 03:42, 1 -> 2 at 04:09, confirmed by the level box).
 - `SMART_CRAFT_YIELD` and the Freebies close template: verify after the next restart (`pausing for waiting workflow(s)`, `tap close-menu`).
 - Whether drone upgrades survive prestige: compare before/after the next prestige.
 - Skill-Tree (unlocked at Obelisk 4): automation ideas from the wiki discussed, nothing built (user: explore as we go).

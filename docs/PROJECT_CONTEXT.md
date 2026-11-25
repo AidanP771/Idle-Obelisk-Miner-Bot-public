@@ -194,7 +194,9 @@ lazy imports to avoid circular imports. Level detection writes
   scroll once `unlock_at.png` is visible below every Buy button). Per bar
   type the target depends on `SMART_CRAFT_CRAFT_TARGET` (bars whose icon is on
   no Craft page, e.g. not unlocked after a prestige, are skipped for 5 min): `next` (default) =
-  the cheapest row's need (enough for the next purchase; the following round
+  the cheapest need that is not met yet (enough for the next purchase that
+  still lacks this bar; met needs are ignored, since 2026-11-25, so a cheap row
+  waiting for another bar cannot hide a dearer one; the following round
   crafts for the next one), `all` = the sum of all needs (before 2026-11-24
   the only mode; it usually turns all ore into bars). Rows with two costs (two bars, or
   bar + gold per the game wiki) are read up to the next cost icon (bar
@@ -249,7 +251,7 @@ lazy imports to avoid circular imports. Level detection writes
   Permanent -> Workshop (`workshop_header.png`) and reads the buyable rows
   (up to three bar costs, "have/" above "need"; icons grouped per row). Their
   costs join the Upgrades rows (in `all` mode the crafting target per bar is
-  the sum of both; in `next` mode the cheapest of them). Buying keeps the user-chosen priority: regular Upgrades first, then
+  the sum of both; in `next` mode the cheapest unmet one). Buying keeps the user-chosen priority: regular Upgrades first, then
   every Workshop row whose costs are all met and whose Buy button is bright,
   verified on a fresh frame. Workshop upgrades are permanent (survive prestige).
   Surplus ore (`SMART_CRAFT_SELL_SURPLUS_ORE`, default off): only when the
@@ -301,7 +303,10 @@ lazy imports to avoid circular imports. Level detection writes
   consecutive frames (numbers animate after changes); the Craft bar count must
   equal the Upgrades `have` value before crafting; a batch without progress or
   with an implausible change (> 50 bars per press) stops crafting; purchases
-  count only if a fresh frame shows the row changed. List scrolling measures
+  count only if a fresh frame shows the row changed. The game keeps each
+  list's scroll position, so reaching the top starts with one fast 1100 px
+  drag (momentum) and normal drags only confirm it (2026-11-25). The buy step
+  logs rows whose bar cost is met but whose Buy is dark. List scrolling measures
   the real content shift (drags overshoot by momentum) from a textured band
   and treats repetitive matches as unknown, ending the scan with the rows read
   so far. Verified on the emulator (2026-11-22, level 37-42, World 1 with
