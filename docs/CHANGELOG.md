@@ -12,7 +12,7 @@ Local, unversioned changes (`config/user_workflows.json`,
 
 ## 2026-11-25
 
-### Pickaxe upgrade never crafted for; faster scroll to the list top (this entry's commit)
+### Pickaxe upgrade never crafted for; faster scroll to the list top (`ddabfac`)
 - Bug (user report: the pickaxe is not upgraded): live frame of the Upgrades
   top showed Upgrade Pickaxe copper 10/15 and Pickaxe Crit Chance tin 0/2 +
   copper 10/2. Two faults together: the tin icon (x=158) was left of the cost
