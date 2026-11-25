@@ -12,6 +12,17 @@ Local, unversioned changes (`config/user_workflows.json`,
 
 ## 2026-11-25
 
+### Bomb rotation drains the Basic bomb (this entry's commit)
+- Bug (user report: the first bomb in the line is not used up): the rotation
+  fired Basic once per run; Basic gains about one charge per 30 s, so it sat
+  at 4-5 of 5 and its recharge time was wasted.
+- New template `bomb_interface/count_zero_tpl` (the white "0" under a bomb
+  icon; zeros 0.98-1.0, everything else <= 0.53 on 94 saved frames). The local
+  `bomb_rotation_early_game` fires Basic again 2.7 s apart (past the 2.6 s
+  floor turnover) while its count is not 0, at most 5 shots per run.
+- Verified: validation, engine dry run (1/2/5 shots, cap 5), live after a
+  workflow reload: 06:01 five shots, 06:02 two shots then stop at "0".
+
 ### Pickaxe upgrade never crafted for; faster scroll to the list top (`ddabfac`)
 - Bug (user report: the pickaxe is not upgraded): live frame of the Upgrades
   top showed Upgrade Pickaxe copper 10/15 and Pickaxe Crit Chance tin 0/2 +
@@ -339,3 +350,4 @@ Backups of each step are kept in the session scratchpad, not in the repo.
 | 2026-11-24 | `user_settings.json` | `FREEBIES_DIAMONDS_PER_CLAIM` 28 -> 5 (the pack gives 5; earlier gem statistics are overcounted). |
 | 2026-11-24 | `user_workflows.json` | `buy_drone_points`: `read_number` of the drone point counter before Max and after Exchange; unreadable or not increased -> close menu, abort (needs the restart). |
 | 2026-11-24 | `user_settings.json` | `SMART_CRAFT_BUY_GOLD_UPGRADES` true (set by the user in the WebUI; gold rows are bought with the bar upgrades). |
+| 2026-11-25 | `user_workflows.json` | `bomb_rotation_early_game`: four `if template_not_visible(count_zero_tpl)` drain steps after Basic (wait 2.4 s + Fire); reloaded live 06:00. Backup before the edit in the session scratchpad. |

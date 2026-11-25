@@ -149,6 +149,8 @@ Timing (2026-11-24): a lootbug could stay on screen for minutes. Scans ran only 
 - Holding **Fire** fires rapidly; a tap fires one charge.
 - The panel shows each bomb's charge count; the Bomb Bear suit (maxed) fires a Basic bomb by itself when Basic is at max capacity, so Basic charges are not wasted.
 - A 5-round rotation took 57 s and held the action lock 63% of the time at a 90 s interval (2026-11-24); one round per run every 30 s takes 10-11 s.
+- Charge counts sit at the bottom right of each panel slot: digits about x 165-174, y 1256-1273 for slot 1 (Basic), slots 90 px apart (Basic, Chain, Plenty, Exp, then a fifth purple bomb, 2026-11-25). White when not full, yellow when full. The Smart Craft glyph reader cannot read this font (it read a "0" as "1"); `bomb_interface/count_zero_tpl` (the white "0") scores 0.98-1.0 on zeros and at most 0.53 on other digits or slots (94 saved frames).
+- 2026-11-25 (user report: the first bomb is not used up): Basic stayed at 4-5 charges. It gains about one charge per 30 s and the rotation fired one per run, so a full Basic never drained and its recharge time was wasted. Live after the drain steps: 5 shots on the first run, then 2 and stop at "0".
 - After a Basic bomb the floor turns over (fresh rock set) about **2.6 s** later. Charges fired inside that window hit already broken rocks.
 
 ## Local Workflow Setup (not versioned)
@@ -158,7 +160,7 @@ replaces the default workflows. The reference setup uses:
 
 | Slug | Auto | Purpose |
 | --- | --- | --- |
-| `bomb_rotation_early_game` | on, 30 s | Optional close of a leftover menu (`menu/close_menu_tpl`, ROI [405,1471,658,1546]: 1.0 with a menu open, <= 0.27 on the main screen over 239 frames); optional panel open; one round of Exp, Plenty (mark), Basic (break), Chain - one tap each, each bomb in an `if template_visible` (0.9) so locked bombs are skipped; optional panel close. About 10 s per run (2026-11-24; was 5 rounds every 90 s, 57 s per run). The Plenty/Basic/Chain checks reuse the previous frame (`use_prev_screenshot`, 2026-11-24), 3 screenshots less per run. |
+| `bomb_rotation_early_game` | on, 30 s | Optional close of a leftover menu (`menu/close_menu_tpl`, ROI [405,1471,658,1546]: 1.0 with a menu open, <= 0.27 on the main screen over 239 frames); optional panel open; one round of Exp, Plenty (mark), Basic (break), Chain - one tap each, except Basic: four top-level `if template_not_visible(count_zero_tpl, ROI [150,1245,190,1285], 0.85)` steps fire it again 2.7 s apart (wait 2.4 s + Fire) until its count shows 0 (2026-11-25; about 13 s per run, up to 26 s while draining a full Basic), each bomb in an `if template_visible` (0.9) so locked bombs are skipped; optional panel close. About 10 s per run (2026-11-24; was 5 rounds every 90 s, 57 s per run). The Plenty/Basic/Chain checks reuse the previous frame (`use_prev_screenshot`, 2026-11-24), 3 screenshots less per run. |
 | `bomb_basic_rotation_all` | off, inactive | Original default rotation (2 s holds); `enabled_default` false so it stays off after restarts. |
 | `obelisk_fight` | on, 60 s (only a screenshot when not ready) | If `obelisk/main_ready_tpl` is visible -> call `obelisk_fight_attack`. |
 | `obelisk_fight_attack` | helper | Tap the obelisk HUD button at (843,440) (fixed position: its icon changes with every obelisk level, so `obelisk_button_tpl` stopped matching after Obelisk 4), Fight tab; Claim Victory visible (`obelisk/claim_victory_tpl`, 0.9) -> claim; damage warning or no ready Attack -> close; else Attack, hold (450,800) 5 x 8 s, optional Exit and Return To Mines. The damage-warning branch ends with `defer` 900 s (2026-11-24): one check per 15 min instead of one per minute while the pickaxe is too weak. |
@@ -245,6 +247,6 @@ Pitfalls:
 - Whether drone upgrades survive prestige: compare before/after the next prestige.
 - Skill-Tree (unlocked at Obelisk 4): automation ideas from the wiki discussed, nothing built (user: explore as we go).
 - An Upgrades pin was added to the bottom bar by a stray tap (harmless; remove via Setup Pins).
-- Bomb rotation: one round every 30 s; charge counts are not read, so empty bombs get a no-op tap. Recharge upgrades change the ideal interval.
+- Bomb rotation: one round every 30 s; only Basic's "0" is checked (drain), other bombs still get one tap even when empty (no-op). The fifth (purple) bomb, probably the Infinity Bomb from the Workshop (unlocked 2026-11-25 02:51), is not in the rotation yet. Recharge upgrades change the ideal interval.
 - Bar types beyond World 1 floor 20 (VR-Demonite has an ore icon but no bar template yet) need templates as they unlock.
 - The default workflows in `config/config_workflows.py` still contain the original `auto_prestige` (level 127 plus an unconditional floor-Auto tap) and `close_pin_tpl`.
