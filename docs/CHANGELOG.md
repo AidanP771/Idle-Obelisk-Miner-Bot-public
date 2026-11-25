@@ -12,7 +12,7 @@ Local, unversioned changes (`config/user_workflows.json`,
 
 ## 2026-11-25
 
-### item_cooldown blocks only after a real item use (this entry's commit)
+### item_cooldown blocks only after a real item use (`28cbb85`)
 - Live after the restart (06:46): `ITEMS_ENABLED` was saved at 06:47, after the
   start, so items stayed off (settings need a restart). The obelisk showed the
   damage warning at 06:47 and 07:03, and `item_cooldown obelisk 7200` blocked
