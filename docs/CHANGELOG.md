@@ -12,7 +12,7 @@ Local, unversioned changes (`config/user_workflows.json`,
 
 ## 2026-11-25
 
-### Upgrade Pickaxe gets priority in Smart Craft (COMMIT)
+### Upgrade Pickaxe gets priority in Smart Craft (`2cf9c8c`)
 - User report: the pickaxe is upgraded slowly, and pickaxe damage drives
   almost everything else. Log since the 07:35 prestige: level 2 -> 3 (copper
   15) waited 17-30 min with 500-900 copper ore in stock, because `next` mode
