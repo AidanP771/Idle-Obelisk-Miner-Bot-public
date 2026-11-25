@@ -471,6 +471,27 @@ rationale is not documented:
   remembers them for the current top-level run; increased/changed compare with
   the stored value. A failed read or comparison fails the step (with
   `optional`: `last_step_failed` is true). Used for the drone point counter.
+- Items (`features/items.py`, Settings section `items`, `ITEMS_ENABLED` default
+  off; 2026-11-25). Every `ITEMS_CHECK_INTERVAL_S` (60 s) the worker takes the
+  action lock only when something is due: it opens the item bag (backpack
+  button; open = open-button template AND the Use button, because the dimmed
+  button behind a menu matches the open template), finds each item by its
+  template (best template per 80 px slot, >= 0.9), reads its count (own digit
+  references `images/items/digits/`, no '9' yet: such counts read as unknown
+  and the item is skipped) and whether its green buff timer runs. Items in
+  `ITEMS_KEEP_RUNNING` are used when not running and held above
+  `ITEMS_RESERVE`; Strawberries the same while the HUD is not Level Capped;
+  Blue Cow at once. A use = tap slot, check the selected icon and a lit Use,
+  tap Use, confirm by a lower count, a running timer or the slot vanishing.
+  Every `ITEMS_CHESTS_INTERVAL_S` (30 min): bag counts, Chests -> Open All
+  (quantity All) -> Confirm, Relics -> Open All (match only in x 600-830,
+  Reroll is never tapped) -> close the loot list, bag counts again; the
+  difference is the chest yield. `item_record.json` (repo root, git-ignored)
+  keeps bag snapshots, chest yields and use counts.
+- Workflow steps `use_items` (`items` comma-separated, `reserve`,
+  `cooldown_key`) and `item_cooldown` (`key`, `seconds`): use items inside a
+  workflow (its lock); skipped while `ITEMS_ENABLED` is off or the key is
+  blocked; never fail the workflow (no use -> `last_step_failed`).
 - Floor Auto guard (`features/floor_auto.py`, `FLOOR_AUTO_GUARD`, default on,
   every `FLOOR_AUTO_CHECK_INTERVAL_S` = 30 s): reads the toggle on the latest
   cached `game_scr` (no lock); only if it is dark red (off) it takes the action

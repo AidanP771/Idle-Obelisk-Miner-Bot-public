@@ -121,6 +121,12 @@ def build_state_dict():
                 "status": state.smart_craft_last_status,
                 "trip": state.smart_craft_trip,
             },
+            "items": {
+                "status": getattr(state, "items_last_status", ""),
+                "used": getattr(state, "items_used", 0),
+                "chest_batches": getattr(state, "items_chest_batches", 0),
+                "relic_batches": getattr(state, "items_relic_batches", 0),
+            },
             "notices": {
                 "enabled": state.notices_enabled,
                 "clicked": state.notices_clicked_count,

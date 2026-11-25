@@ -36,6 +36,8 @@ const STEP_TYPES = [
   {value:'wait',            label:'Wait (Sleep)'},
   {value:'defer',           label:'Defer Next Run'},
   {value:'read_number',     label:'Read Number (store / compare)'},
+  {value:'use_items',       label:'Use Items (item bag)'},
+  {value:'item_cooldown',   label:'Item Cooldown'},
   {value:'rainbow_check',   label:'Rainbow Floor Check'},
   {value:'call_workflow',   label:'Call Workflow'},
   {value:'hold_and_wiggle', label:'Hold & Wiggle (chained swipes)'},
@@ -110,6 +112,16 @@ const STEP_FIELDS = {
     {k:'optional',            label:'Optional (no fail if missing)',  type:'bool', hint:'A failed read or comparison skips the step (an If "last step failed" can react) instead of aborting.'},
     {k:'use_prev_screenshot', label:'Use Prev Screenshot',            type:'bool'},
     {k:'sleep_after',         label:'Sleep After (s)',                type:'num', step:0.05},
+  ],
+  'use_items': [
+    {k:'items',               label:'Items',                          type:'text', hint:'Comma-separated: apple, bread, drone_juice, banana_coffee, pike, eye_of_newt, rock_cake, juicy_plums, chaos_totem, primal_meat, strawberries, charge_magnet, blue_cow, skill_bit. Each is used when held above Reserve and its buff is not running. Needs ITEMS_ENABLED.'},
+    {k:'reserve',             label:'Reserve',                        type:'num', step:1, hint:'Keep at least this many of each item (0 = use the last one).'},
+    {k:'cooldown_key',        label:'Cooldown Key',                   type:'text', hint:'Optional. An Item Cooldown step with the same key blocks this step for a while.'},
+    {k:'sleep_after',         label:'Sleep After (s)',                type:'num', step:0.05},
+  ],
+  'item_cooldown': [
+    {k:'key',                 label:'Key',                            type:'text', hint:'Cooldown key of the Use Items steps to block.'},
+    {k:'seconds',             label:'Seconds',                        type:'num', step:60},
   ],
   'defer': [
     {k:'seconds',             label:'Seconds',                        type:'num', step:10, hint:'The next automatic run of this workflow (the top-level one, also from a called helper) is not before now + Seconds. The current run continues.'},

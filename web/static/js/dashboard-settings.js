@@ -100,6 +100,15 @@ const FIELD_HINTS={
   'SMART_CRAFT_CRAFT_TARGET':'next | all. next (default): per bar type, craft only what the cheapest upgrade still lacking that bar needs, buy it, and craft for the following one in the next round (short cycles, ore stays as ore). all: craft for the sum of every visible upgrade, which usually turns all ore into bars and keeps Smart Craft busy for minutes',
   'SMART_CRAFT_YIELD_PRIORITY':'comma-separated workflow slugs (and lootbug) Smart Craft pauses for as soon as they wait, e.g. obelisk_fight,auto_prestige,lootbug',
   'SMART_CRAFT_YIELD_MIN_WAIT_S':'other waiting workflows (e.g. the bomb rotation) make Smart Craft pause only after they have waited this long (0 = at once, the old behaviour); fewer pauses keep cycles short',
+  'ITEMS_ENABLED':'master switch for items: keep-running buffs, Strawberries, Blue Cow, opening item and relic chests, and the use_items workflow steps (obelisk fight, bombs). Takes the game for a few seconds when something is due',
+  'ITEMS_CHECK_INTERVAL_S':'seconds between item checks; the bag is only opened when an item may need using',
+  'ITEMS_KEEP_RUNNING':'comma-separated items used whenever their buff is not running (a use adds time, so an early use wastes nothing). Known: apple, bread, drone_juice, banana_coffee, pike, eye_of_newt, rock_cake, juicy_plums, chaos_totem, primal_meat, strawberries, charge_magnet, blue_cow, skill_bit',
+  'ITEMS_RESERVE':'keep-running items and Strawberries are used only while more than this many are held',
+  'ITEMS_STRAWBERRIES_WHEN_UNCAPPED':'use Strawberries (EXP 3x) whenever not running and the HUD does not show Level Capped',
+  'ITEMS_USE_BLUE_COW':'use Blue Cow (2x game speed, 10 min) as soon as one is held',
+  'ITEMS_OPEN_CHESTS':'open all item chests (Open All + Confirm) every ITEMS_CHESTS_INTERVAL_S; the yield is logged and saved in item_record.json',
+  'ITEMS_OPEN_RELICS':'open all relic chests (Open All, top right) every ITEMS_CHESTS_INTERVAL_S. Reroll (200 gems) is never touched',
+  'ITEMS_CHESTS_INTERVAL_S':'seconds between chest and relic openings',
   'FLOOR_AUTO_GUARD':'keep auto-descend on: when the floor Auto toggle (below the floor button) shows dark red, take the game, confirm on a fresh screenshot and tap it back to green. Works whether Smart Craft is on or off; never during a Smart Craft floor trip or while paused',
   'FLOOR_AUTO_CHECK_INTERVAL_S':'seconds between floor Auto checks; a check only reads the latest screenshot unless Auto is off',
   'SMART_CRAFT_YIELD':'between pages and bars, pause when auto workflows (obelisk fight, bombs, ...) are waiting for the game: close the menu, let them run, then continue with the same scan instead of holding the game for the whole cycle',
@@ -217,7 +226,7 @@ function renderSettings(data){
   let h='';
   for(const[section,vals]of Object.entries(data)){
     if(typeof vals!=='object'||vals===null)continue;
-    const sectionLabel = section==='tapping' ? 'Humanized Taps' : section==='founders' ? 'FOUNDERS BUNDLE' : section==='smart_craft' ? 'Smart Craft' : section==='notices' ? 'Notices' : section==='startup_defaults' ? 'Startup Defaults' : section;
+    const sectionLabel = section==='tapping' ? 'Humanized Taps' : section==='founders' ? 'FOUNDERS BUNDLE' : section==='smart_craft' ? 'Smart Craft' : section==='items' ? 'Items' : section==='notices' ? 'Notices' : section==='startup_defaults' ? 'Startup Defaults' : section;
     h+=`<div class="cfg-section"><div class="cfg-section-title" onclick="toggleCfgSection(this)">${sectionLabel}</div><div class="cfg-fields">`;
     if(SECTION_NOTES[section]){
       h+=`<div style="font-size:.58rem;color:var(--text-dim);padding:4px 0 6px;line-height:1.4">${SECTION_NOTES[section]}</div>`;

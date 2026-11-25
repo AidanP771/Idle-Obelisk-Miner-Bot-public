@@ -196,6 +196,17 @@ SMART_CRAFT_FLOOR_TRIPS = False        # mine missing ore on a lower floor, then
 SMART_CRAFT_FLOOR_TRIP_S = 600.0       # time spent on the lower floor per trip
 FLOOR_AUTO_GUARD = True                # switch the floor Auto toggle back on when found off (not during floor trips)
 FLOOR_AUTO_CHECK_INTERVAL_S = 30.0     # how often the latest screenshot is checked (no lock unless Auto is off)
+
+# --- Items (features/items.py; also the use_items workflow step) -------------------
+ITEMS_ENABLED = False                  # master switch: bag rules, chest/relic opening and use_items steps
+ITEMS_CHECK_INTERVAL_S = 60.0          # how often the bag rules are checked (the bag opens only when an item may need it)
+ITEMS_KEEP_RUNNING = "bread,drone_juice,banana_coffee,eye_of_newt"  # used whenever their buff is not running
+ITEMS_RESERVE = 2                      # keep-running items (and Strawberries) are used only while more are held
+ITEMS_STRAWBERRIES_WHEN_UNCAPPED = True  # Strawberries (EXP 3x) while the HUD is not 'Level Capped'
+ITEMS_USE_BLUE_COW = True              # Blue Cow (2x game speed) as soon as one is held
+ITEMS_OPEN_CHESTS = True               # open all item chests every ITEMS_CHESTS_INTERVAL_S
+ITEMS_OPEN_RELICS = True               # open all relic chests (never Reroll) every ITEMS_CHESTS_INTERVAL_S
+ITEMS_CHESTS_INTERVAL_S = 1800.0       # chest/relic opening interval
 SMART_CRAFT_SELL_SURPLUS_ORE = False   # Sell All for ores no buyable bar-cost upgrade needs
 SMART_CRAFT_MAX_PRESSES_PER_BAR = 50   # Craft presses per bar type and cycle
 SMART_CRAFT_MAX_BATCH = 10             # presses between two verification screenshots

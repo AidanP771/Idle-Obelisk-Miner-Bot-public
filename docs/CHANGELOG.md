@@ -12,6 +12,25 @@ Local, unversioned changes (`config/user_workflows.json`,
 
 ## 2026-11-25
 
+### Items feature: bag rules, chests and relics, use_items step (this entry's commit)
+- User request: the automation never used items; also open chests and relics
+  and keep a record of items. Wiki (Items, Chests) and live frames (captured
+  with the user) are in the development notes.
+- New `features/items.py` (Settings section "Items", `ITEMS_ENABLED` off by
+  default, restart): keep-running items with reserve, Strawberries while not
+  Level Capped, Blue Cow at once, item chests (Open All + Confirm) and relic
+  chests (Open All; Reroll is never tapped) every 30 min, `item_record.json`
+  with bag snapshots, chest yields (bag difference) and use counts. New
+  templates `images/items/` (page checks, relic buttons, Skill Bit, count
+  digits 0-8).
+- New workflow steps `use_items` and `item_cooldown` (engine, validation,
+  editor). Local workflows: pickaxe items before each obelisk fight, a 2 h
+  item block after a damage warning, Chaos Totem in the bomb rotation.
+- Verified: 340 Python and 27 JS tests (bag counts and active timer on live
+  frames, chest/relic flows replayed on captured frames, Reroll never tapped,
+  reserve/cooldown rules, step and settings validation); workflow validation
+  and engine dry run. Not verified live (needs `ITEMS_ENABLED` and a restart).
+
 ### Items research (docs only, `c6b20d2`)
 - User: the automation does not use items. Read the wiki (Items, Chests,
   Store) and captured the Chests, Relics and item bag screens with the user
@@ -358,3 +377,4 @@ Backups of each step are kept in the session scratchpad, not in the repo.
 | 2026-11-24 | `user_workflows.json` | `buy_drone_points`: `read_number` of the drone point counter before Max and after Exchange; unreadable or not increased -> close menu, abort (needs the restart). |
 | 2026-11-24 | `user_settings.json` | `SMART_CRAFT_BUY_GOLD_UPGRADES` true (set by the user in the WebUI; gold rows are bought with the bar upgrades). |
 | 2026-11-25 | `user_workflows.json` | `bomb_rotation_early_game`: four `if template_not_visible(count_zero_tpl)` drain steps after Basic (wait 2.4 s + Fire); reloaded live 06:00. Backup before the edit in the session scratchpad. |
+| 2026-11-25 | `user_workflows.json` | `obelisk_fight`: `use_items` pickaxe items (cooldown key `obelisk`) before the fight; `obelisk_fight_attack` damage-warning branch: `item_cooldown obelisk 7200`; `bomb_rotation_early_game`: `use_items chaos_totem` (reserve 2). Inactive until `ITEMS_ENABLED`; needs the restart that brings the new step types. Backup in the session scratchpad. |

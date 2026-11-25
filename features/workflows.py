@@ -427,6 +427,35 @@ def _step_read_number(step: dict, wf: dict) -> bool:
     return False
 
 
+def _step_use_items(step: dict, wf: dict) -> bool:
+    """Use items from the item bag (features/items.py) while the workflow holds
+    the action lock: each listed item that is held above `reserve` and whose
+    buff is not running. Does nothing while ITEMS_ENABLED is off or the
+    `cooldown_key` is blocked. Never fails the workflow; when no item was used,
+    last_step_failed is true."""
+    global _last_click_template_missed
+    from features import items  # lazy: cv2 templates are loaded on first use
+    keys = items.item_keys(step.get("items", ""))
+    used = []
+    if not getattr(s, "ITEMS_ENABLED", False):
+        _log_step("[WF] use_items: ITEMS_ENABLED is off -> skipped", wf)
+    elif keys:
+        used = items.use_items(keys, int(step.get("reserve") or 0), reason=f"workflow {wf.get('name', '?')}",
+                               cooldown_key=str(step.get("cooldown_key") or "") or None)
+        _log_step(f"[WF] use_items {', '.join(keys)}: used {', '.join(used) or 'none'}", wf)
+    if not used:
+        _last_click_template_missed = True
+    return True
+
+
+def _step_item_cooldown(step: dict, wf: dict) -> bool:
+    """Block `use_items` steps with this cooldown_key for `seconds`."""
+    from features import items
+    items.block(str(step.get("key", "")), float(step.get("seconds", 0.0)))
+    _log_step(f"[WF] item_cooldown {step.get('key')}: {float(step.get('seconds', 0.0)):.0f}s", wf)
+    return True
+
+
 def _step_wait(step: dict, wf: dict) -> bool:
     secs = float(step.get("seconds", 0.0))
     _log_step(f"[WF] wait {secs}s", wf)
@@ -665,6 +694,8 @@ _STEP_EXECUTORS = {
     "wait": _step_wait,
     "defer": _step_defer,
     "read_number": _step_read_number,
+    "use_items": _step_use_items,
+    "item_cooldown": _step_item_cooldown,
     "rainbow_check": _step_rainbow_check,
     "call_workflow": _step_call_workflow,
     "hold_and_wiggle": _step_hold_and_wiggle,

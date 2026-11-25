@@ -84,6 +84,21 @@ def optional(check):
     return validate
 
 
+# Item keys of features/items.py (kept here so validation does not import cv2;
+# tests/test_items.py checks both lists are equal).
+ITEM_KEYS = ("apple", "bread", "drone_juice", "banana_coffee", "pike", "eye_of_newt", "rock_cake",
+             "juicy_plums", "chaos_totem", "primal_meat", "strawberries", "charge_magnet", "blue_cow",
+             "skill_bit")
+
+
+def item_list(value, path):
+    """Comma-separated item keys, e.g. "bread, drone_juice"; empty is allowed."""
+    text(value, path)
+    for name in (n.strip().lower().replace(" ", "_") for n in value.split(",")):
+        if name and name not in ITEM_KEYS:
+            _error(path, f"unknown item '{name}' (known: {', '.join(ITEM_KEYS)})")
+
+
 def optional_roi(value, path):
     # The editor serializes an empty ROI/area as [], meaning full/default area.
     if value != []:
@@ -148,6 +163,11 @@ SETTINGS = {
         roi="FOUNDERS_DETECT_ROI", relative_path="FOUNDERS_TEMPLATE", UNIT="FOUNDERS_MATCH_THRESHOLD",
         LOG="FOUNDERS_LOG_LEVEL FOUNDERS_LOG_LEVEL_CLICK FOUNDERS_LOG_LEVEL_BUSY")
         | {"FOUNDERS_MAX_CLAIMS_PER_CYCLE": number(1, 100, integer=True)},
+    "items": {"ITEMS_ENABLED": boolean, "ITEMS_CHECK_INTERVAL_S": number(10, 3600),
+              "ITEMS_KEEP_RUNNING": item_list, "ITEMS_RESERVE": number(0, 100000, integer=True),
+              "ITEMS_STRAWBERRIES_WHEN_UNCAPPED": boolean, "ITEMS_USE_BLUE_COW": boolean,
+              "ITEMS_OPEN_CHESTS": boolean, "ITEMS_OPEN_RELICS": boolean,
+              "ITEMS_CHESTS_INTERVAL_S": number(300, 86400)},
     "smart_craft": _schema(POS="SMART_CRAFT_INTERVAL_S SMART_CRAFT_BUSY_RETRY_S",
         N="SMART_CRAFT_UI_DELAY_S", roi="SMART_CRAFT_LIST_ROI", I="SMART_CRAFT_TAP_JITTER_PX",
         UNIT="SMART_CRAFT_ICON_THRESHOLD SMART_CRAFT_BUTTON_THRESHOLD", LOG="SMART_CRAFT_LOG_LEVEL")
@@ -232,6 +252,9 @@ STEPS = {
                        "log_mode": choice("both", "hit_only", "miss_only", "none")},
     "wait": {"seconds": N},
     "defer": {"seconds": POS},
+    "use_items": {"items": item_list, "reserve": optional(number(0, 100000, integer=True)),
+                  "cooldown_key": text},
+    "item_cooldown": {"key": text, "seconds": POS},
     "read_number": {"roi": roi, "key": text, "expect": choice("store", "increased", "changed"),
                     "optional": boolean, "use_prev_screenshot": boolean},
     "rainbow_check": {"roi": roi, "sat_min": optional(number(0, 255, integer=True)),
@@ -275,7 +298,8 @@ def _validate_steps(steps, path, definitions, depth=0, inactive=False):
         if not disabled:
             for key in {"tap_roi": ("roi",), "tap_xy": ("x", "y"),
                         "rainbow_check": ("roi",), "hold_and_wiggle": ("roi",),
-                        "call_workflow": ("target",),
+                        "call_workflow": ("target",), "use_items": ("items",),
+                        "item_cooldown": ("key",),
                         "click_template": ("template",), "click_rotating": ("template",)}.get(kind, ()):
                 if step.get(key) is None or step.get(key) == "":
                     _error(f"{sp}.{key}", "required for enabled step")

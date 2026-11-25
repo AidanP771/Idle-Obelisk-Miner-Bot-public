@@ -82,6 +82,10 @@ smart_craft_upgrades_bought = 0      # purchases verified on a fresh frame
 smart_craft_last_run_ts = 0.0
 smart_craft_next_check_ts = 0.0
 smart_craft_last_status = ""
+items_last_status = ""               # features/items.py: last cycle result
+items_used = 0                       # confirmed item uses
+items_chest_batches = 0              # item chest openings
+items_relic_batches = 0              # relic chest openings
 floor_auto_restored = 0               # floor Auto switched back on by features/floor_auto.py
 smart_craft_trip = None              # {"origin", "floor", "until", "auto_was_on"} during a floor trip
 

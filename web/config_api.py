@@ -111,6 +111,17 @@ def settings_get():
                 "FOUNDERS_LOG_LEVEL_CLICK": s.FOUNDERS_LOG_LEVEL_CLICK,
                 "FOUNDERS_LOG_LEVEL_BUSY": s.FOUNDERS_LOG_LEVEL_BUSY,
             },
+            "items": {
+                "ITEMS_ENABLED": s.ITEMS_ENABLED,
+                "ITEMS_CHECK_INTERVAL_S": s.ITEMS_CHECK_INTERVAL_S,
+                "ITEMS_KEEP_RUNNING": s.ITEMS_KEEP_RUNNING,
+                "ITEMS_RESERVE": s.ITEMS_RESERVE,
+                "ITEMS_STRAWBERRIES_WHEN_UNCAPPED": s.ITEMS_STRAWBERRIES_WHEN_UNCAPPED,
+                "ITEMS_USE_BLUE_COW": s.ITEMS_USE_BLUE_COW,
+                "ITEMS_OPEN_CHESTS": s.ITEMS_OPEN_CHESTS,
+                "ITEMS_OPEN_RELICS": s.ITEMS_OPEN_RELICS,
+                "ITEMS_CHESTS_INTERVAL_S": s.ITEMS_CHESTS_INTERVAL_S,
+            },
             "smart_craft": {
                 "SMART_CRAFT_INTERVAL_S": s.SMART_CRAFT_INTERVAL_S,
                 "SMART_CRAFT_BUSY_RETRY_S": s.SMART_CRAFT_BUSY_RETRY_S,
