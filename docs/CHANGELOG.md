@@ -12,7 +12,7 @@ Local, unversioned changes (`config/user_workflows.json`,
 
 ## 2026-11-25
 
-### Smart Craft buys free upgrade rows (COMMIT)
+### Smart Craft buys free upgrade rows (`a814e7d`)
 - User report: a prestige upgrade lowers pickaxe costs and can make the first
   (and further) levels free; Smart Craft did not press Buy then. Captured
   live at 22:08: "Upgrade Pickaxe - 1 > 3 / Free!" with a lit Buy button, not
