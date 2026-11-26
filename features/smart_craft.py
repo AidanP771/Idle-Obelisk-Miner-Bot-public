@@ -541,6 +541,34 @@ _CONFIRM_POLLS = 5
 _CONFIRM_STEP_S = 0.3
 
 
+# A row whose cost is waived shows "Free!" instead of a cost icon (seen
+# 2026-11-25 on Upgrade Pickaxe after a prestige: a prestige upgrade lowers
+# pickaxe costs, enough of it makes the first levels free). Such rows have no
+# bar icon, so read_upgrade_rows never lists them. The template scores 1.0 on
+# the row and at most 0.81 on locked "Free Bomb Chance" rows.
+_FREE_THRESHOLD = 0.92
+_FREE_TO_ICON_DY = -17   # "Free!" text top -> where a cost icon top would be (Buy and level box offsets)
+
+
+def read_free_rows(img, gray):
+    """[(y, buy_x, buy_y, lit)] for rows that cost nothing; y is in cost-icon
+    coordinates so read_level and the Buy offsets work as for bar rows."""
+    if gray is None:
+        return []
+    _lx1, ly1, _lx2, ly2 = _list_roi()
+    rows = []
+    for _x, top in find_all(gray, _tpl("free.png"), (_UPGRADE_ICON_X[0], ly1, _UPGRADE_ICON_X[1], ly2),
+                            _FREE_THRESHOLD):
+        y = top + _FREE_TO_ICON_DY
+        bx1, by1, bx2, by2 = _UPGRADE_BUY
+        buy = _button(gray, _tpl("buy.png"), (bx1, max(0, y + by1), bx2, y + by2))
+        if not buy["found"]:
+            continue
+        patch = img[buy["y"]:buy["y"] + buy["h"], buy["x"]:buy["x"] + buy["w"]]
+        rows.append((y, buy["cx"], buy["cy"], float(patch[:, :, 2].mean()) > _AFFORDABLE_MIN_RED))
+    return rows
+
+
 def read_level(gray, y):
     """Current level of the row whose cost icon top is at y, or None when no
     level box is readable (level 0, or the box is cut off at the list top)."""
@@ -1134,24 +1162,31 @@ def buy_upgrades(generation):
                              f"(another cost of the row is missing) -> not buying")
             # Top-down, so Upgrade Pickaxe (first row) is bought before a cheaper
             # row of the same bar spends the bars crafted for it.
-            targets = sorted((r for r in rows
+            # Free rows ("Free!", no cost icon) are bought like met bar rows.
+            free = [("free", 0, 0, y, bx, by, lit) for y, bx, by, lit in read_free_rows(img, gray)]
+            targets = sorted((r for r in rows + free
                               if r[6] and r[1] >= r[2] and not any(abs(r[3] - y) < 5 for y in skipped)),
                              key=lambda r: r[3])
             if not targets:
                 break
             bar, have, need, y, bx, by, _affordable = targets[0]
+            what = "free" if bar == "free" else f"{bar} {have}/{need}"
             level = read_level(gray, y)
-            _tap(bx, by, f"Buy ({bar} {have}/{need})")
-            ok, img, gray, how = _confirm_purchase(y, level, lambda i, g: not any(
-                abs(r[3] - y) < 5 and r[:3] == (bar, have, need) and r[6]
-                for r in read_upgrade_rows(i, g, with_buttons=True)))
+            _tap(bx, by, f"Buy ({what})")
+            if bar == "free":
+                changed = lambda i, g: not any(abs(r[0] - y) < 5 and r[3] for r in read_free_rows(i, g))
+            else:
+                changed = lambda i, g: not any(
+                    abs(r[3] - y) < 5 and r[:3] == (bar, have, need) and r[6]
+                    for r in read_upgrade_rows(i, g, with_buttons=True))
+            ok, img, gray, how = _confirm_purchase(y, level, changed)
             if not ok:
                 skipped.append(y)
-                _log(f"[SMART_CRAFT] Buy ({bar} {have}/{need}) not confirmed ({how}) -> skipping this row")
+                _log(f"[SMART_CRAFT] Buy ({what}) not confirmed ({how}) -> skipping this row")
                 continue
             bought += 1
             state.smart_craft_upgrades_bought += 1
-            _log(f"[SMART_CRAFT] bought upgrade at y={y} ({bar} {have}/{need}; {how})")
+            _log(f"[SMART_CRAFT] bought upgrade at y={y} ({what}; {how})")
         if getattr(s, "SMART_CRAFT_BUY_GOLD_UPGRADES", False) and bought < limit:
             img, gray, bought, _stop = _buy_gold_rows(img, gray, generation, bought, limit)
         if bought >= limit:

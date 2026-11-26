@@ -161,6 +161,36 @@ class PickaxeRowTests(SmartCraftBase):
         self.assertEqual(self.feature.compute_shortfalls(found), {"copper": (10, 15), "tin": (0, 2)})
 
 
+class FreeRowTests(SmartCraftBase):
+    """Live frame 2026-11-25 22:08: after a prestige "Upgrade Pickaxe - 1 > 3"
+    shows "Free!" (prestige upgrade) and has no cost icon, so it was never bought."""
+    def frame(self, name):
+        import cv2
+        from core.vision import find_template
+        self.feature.find_template = find_template
+        img = cv2.imread(str(ROOT / f"tests/data/smart_craft/{name}.png"))
+        return img, cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+    def test_free_row_is_found_with_its_lit_buy_button(self):
+        img, gray = self.frame("upgrades_pickaxe_free")
+        self.assertEqual(self.feature.read_free_rows(img, gray), [(397, 752, 401, True)])
+        self.assertFalse([r for r in self.feature.read_upgrade_rows(img, gray) if r[3] < 480])  # no bar row for it
+        for other in ("upgrades_pickaxe_two_costs", "upgrades_levels"):   # "Free Bomb Chance" rows etc.
+            self.assertEqual(self.feature.read_free_rows(*self.frame(other)), [], other)
+
+    def test_free_row_is_bought_first(self):
+        f = self.feature
+        f._open_page = Mock(return_value=(None, None))
+        f.list_pages = lambda img, gray, gen: iter([(img, gray, 0)])
+        f._button = Mock(return_value={"found": False})
+        tin = ("tin", 9, 6, 843, 752, 848, True)
+        f.read_upgrade_rows = Mock(side_effect=[[tin], [tin]] + [[]] * 5)
+        f.read_free_rows = Mock(side_effect=[[(397, 752, 401, True)]] + [[]] * 5)
+        f._confirm_purchase = Mock(return_value=(True, None, None, "level 0 -> 1"))
+        self.assertEqual(f.buy_upgrades(f._run_generation), 2)
+        self.assertEqual([c.args[:2] for c in f.tap.call_args_list], [(752, 401), (752, 848)])
+
+
 class RealCropTests(SmartCraftBase):
     """Crops from a live Workshop frame (2026-11-24) that were unreadable before
     the third '4' variant (digits/4_3.png): the third cost column renders the

@@ -12,6 +12,21 @@ Local, unversioned changes (`config/user_workflows.json`,
 
 ## 2026-11-25
 
+### Smart Craft buys free upgrade rows (COMMIT)
+- User report: a prestige upgrade lowers pickaxe costs and can make the first
+  (and further) levels free; Smart Craft did not press Buy then. Captured
+  live at 22:08: "Upgrade Pickaxe - 1 > 3 / Free!" with a lit Buy button, not
+  bought since the 21:51 prestige. The row has no cost icon, so
+  `read_upgrade_rows` never listed it. Costs themselves are read from the
+  screen (not hard-coded), so lowered prices were already handled.
+- New template `smart_craft/free.png` and `read_free_rows`; `buy_upgrades`
+  buys lit free rows together with the met bar rows, top-down (the pickaxe
+  first), confirmed by the level box like other purchases.
+- The pickaxe priority (below) worked live: after the 20:49 prestige the
+  pickaxe went from level 0 to 14 in 55 min.
+- Verified: 345 Python tests (reader on the live frame and on frames with
+  locked "Free Bomb Chance" rows, free row bought first). Needs a restart.
+
 ### Upgrade Pickaxe gets priority in Smart Craft (`2cf9c8c`)
 - User report: the pickaxe is upgraded slowly, and pickaxe damage drives
   almost everything else. Log since the 07:35 prestige: level 2 -> 3 (copper
