@@ -12,7 +12,7 @@ Local, unversioned changes (`config/user_workflows.json`,
 
 ## 2026-11-27
 
-### Skill Bits are combined, the Skill Tree is visited (dry run first), item counts with '4' read again (`COMMIT_ST`)
+### Skill Bits are combined, the Skill Tree is visited (dry run first), item counts with '4' read again (`52c65e0`)
 - User request: combine Skill Bits once 10 are held and spend the Skill
   Points in the Skill Tree, top-down. Only children of owned nodes can be
   bought, and costs are only visible for those (user).
