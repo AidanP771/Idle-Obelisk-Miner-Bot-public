@@ -167,7 +167,9 @@ SETTINGS = {
               "ITEMS_KEEP_RUNNING": item_list, "ITEMS_RESERVE": number(0, 100000, integer=True),
               "ITEMS_STRAWBERRIES_WHEN_UNCAPPED": boolean, "ITEMS_USE_BLUE_COW": boolean,
               "ITEMS_OPEN_CHESTS": boolean, "ITEMS_OPEN_RELICS": boolean,
-              "ITEMS_CHESTS_INTERVAL_S": number(300, 86400)},
+              "ITEMS_CHESTS_INTERVAL_S": number(300, 86400),
+              "ITEMS_COMBINE_SKILL_BITS": boolean, "ITEMS_SKILL_TREE": boolean,
+              "ITEMS_SKILL_TREE_INTERVAL_S": number(300, 86400), "ITEMS_SKILL_TREE_DRY_RUN": boolean},
     "smart_craft": _schema(POS="SMART_CRAFT_INTERVAL_S SMART_CRAFT_BUSY_RETRY_S",
         N="SMART_CRAFT_UI_DELAY_S", roi="SMART_CRAFT_LIST_ROI", I="SMART_CRAFT_TAP_JITTER_PX",
         UNIT="SMART_CRAFT_ICON_THRESHOLD SMART_CRAFT_BUTTON_THRESHOLD", LOG="SMART_CRAFT_LOG_LEVEL")

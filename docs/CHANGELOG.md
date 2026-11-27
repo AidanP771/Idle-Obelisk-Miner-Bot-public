@@ -12,6 +12,35 @@ Local, unversioned changes (`config/user_workflows.json`,
 
 ## 2026-11-27
 
+### Skill Bits are combined, the Skill Tree is visited (dry run first), item counts with '4' read again (`COMMIT_ST`)
+- User request: combine Skill Bits once 10 are held and spend the Skill
+  Points in the Skill Tree, top-down. Only children of owned nodes can be
+  bought, and costs are only visible for those (user).
+- Items (`features/items.py`): with `ITEMS_COMBINE_SKILL_BITS` (default on)
+  the bag pass uses Skill Bit ("Combine 10 into a Skill Point!", the normal
+  Use button) while 10 or more are held; checked at most every 10 min.
+- New `features/skill_tree.py`, run from the items cycle with
+  `ITEMS_SKILL_TREE` (default off; local on) after a combine and every
+  `ITEMS_SKILL_TREE_INTERVAL_S` (1800 s): main menu -> Skill-Tree, read the
+  Skill Points (0 -> close), scroll to the top and walk the tree downwards.
+  Nodes are found by their frames: gold = owned, light stone = buyable
+  (children of owned nodes); dark and locked nodes are ignored. Buyable
+  nodes are tapped top-down, left to right; a lit cost button is pressed and
+  the purchase counts only when the node turns gold or the points drop
+  (otherwise the visit stops and the frame goes to
+  `temp/skill_tree_debug/`). `ITEMS_SKILL_TREE_DRY_RUN` (default on, local
+  on) only selects nodes and logs which are affordable.
+- Item counts: the user had seen many bag counts as "?". The single '4'
+  reference scored 0.53-0.64 on the 4s of a new bag frame (the counts render
+  at sub-pixel offsets) and one '2' 0.69 (limit 0.7), so counts with a 4,
+  including Skill Bits, were unreadable and those items skipped. Digits may
+  now have variants (`4_2.png`, `4_3.png`, `2_2.png`); every count on the new
+  frame reads correctly, the older frames read as before.
+- Verified: 363 Python and 27 JavaScript tests, with live frames
+  (`tests/data/skill_tree/`, `tests/data/items/bag_skill_bit_selected.png`)
+  and scripted buy/dry-run sequences. Not yet run live: combining (4 bits
+  held), a lit cost button, a purchase, scrolling the tree. Needs a restart.
+
 ### Freebies claims the Freebie Pack through the Store (`d5d420f`)
 - User report: the Freebie Pack was not being claimed. The pack adds one
   claim every 10 min and banks two ("Banked: N/2"), but after a detection
@@ -473,5 +502,6 @@ Backups of each step are kept in the session scratchpad, not in the repo.
 | 2026-11-24 | `user_settings.json` | `SMART_CRAFT_BUY_GOLD_UPGRADES` true (set by the user in the WebUI; gold rows are bought with the bar upgrades). |
 | 2026-11-25 | `user_workflows.json` | `bomb_rotation_early_game`: four `if template_not_visible(count_zero_tpl)` drain steps after Basic (wait 2.4 s + Fire); reloaded live 06:00. Backup before the edit in the session scratchpad. |
 | 2026-11-25 | `user_workflows.json` | `obelisk_fight`: `use_items` pickaxe items (cooldown key `obelisk`) before the fight; `obelisk_fight_attack` damage-warning branch: `item_cooldown obelisk 7200`; `bomb_rotation_early_game`: `use_items chaos_totem` (reserve 2). Inactive until `ITEMS_ENABLED`; needs the restart that brings the new step types. Backup in the session scratchpad. |
+| 2026-11-27 | `user_settings.json` | `ITEMS_COMBINE_SKILL_BITS` true, `ITEMS_SKILL_TREE` true, `ITEMS_SKILL_TREE_INTERVAL_S` 1800, `ITEMS_SKILL_TREE_DRY_RUN` true (no node is bought until dry run is switched off). Backup in the session scratchpad. |
 | 2026-11-27 | `user_settings.json` | `FREEBIES_CHECK_INTERVAL_S_SLOW` 2700 -> 900 (Store visits every 15 min; the pack banks two 10-min claims). Backup in the session scratchpad. |
 | 2026-11-25 | `user_workflows.json` | `bomb_rotation_early_game`: Infinity Bomb (select + Fire) after Plenty, plus four drain steps on the slot-5 count (ROI [510,1245,550,1285]); reloaded live. Backup in the session scratchpad. |

@@ -176,6 +176,29 @@ Timing (2026-11-24): a lootbug could stay on screen for minutes. Scans ran only 
 - Item bag: the backpack button bottom right of the mine screen (`item_interface/nav/item_interface_closed_tpl`; open: `item_interface_opened_tpl` 0.99). Slots in two rows (x about 141-681, y about 1162 and 1249, 90 px apart) with a count at the bottom right; the order and positions change with the items held (user: items only show when held or in use). Tapping a slot selects it (yellow border) and shows icon, name, duration with hourglass (Bread 1:46: the base 1:30 times an item duration bonus) and the effect; **Use** lights up. The item templates score 0.97-0.998 on the live bag; `skillshard_tpl` no longer matches (0.595) and `BlueCow_tpl` scores 0.929 on Drone Juice (no Blue Cow held), so it needs a high threshold or a new crop.
 - Using an item while its buff runs **adds** its duration: two Bread uses 5 s apart showed a green "3:14" timer on the slot about 18 s later (2 x 1:46) and the count went 22 -> 20. Active buffs are visible as that green timer on their slot.
 
+### Skill Tree and Skill Bits (2026-11-27, user and live frames in `tests/data/skill_tree/`)
+- Main menu -> Permanent -> Skill-Tree (tile about (500,400)). Header "Use
+  Skill Points to unlock permanent perks!". Right side: "Skill Points" (about
+  (765-890, 285-315)) and "Skill Bits" counters, both readable with Smart
+  Craft's `read_text`; the pink "+" button above them opens the Store to buy
+  Skill Points (user), it does not combine bits.
+- The tree scrolls vertically only and starts from one node at the top.
+  Owned nodes: gold frame. Buyable nodes (children of owned nodes; user):
+  light stone frame, ring brightness about 86. Not yet buyable: dark stone,
+  about 42. Locked by obelisk level: lock icon with a blue number (70, 71,
+  72 at the end of the tree), about 33; the panel shows "??????????" and
+  "Unlocked at Obelisk Level 23". Costs are only shown for buyable nodes
+  (user). Connecting lines are about 6 px wide.
+- Tapping a node selects it (white outline): the bottom panel shows the name
+  and effect (top node row 2 left: "Swing Harder", Pickaxe Damage +20%) and a
+  cost button at about (777,1383): star icon and cost "1", dark red (mean red
+  85) with 0 points. The large cost digit is not readable with the existing
+  glyphs.
+- Skill Bits: in the item bag, the selected Skill Bit shows "Combine 10 into a
+  Skill Point!" and the normal Use button (red, lit even with 4 bits).
+- Item bag counts render at sub-pixel offsets: a second and third '4' and a
+  second '2' were needed (`images/items/digits/`).
+
 ### Bombs
 - Bomb panel toggle at about (816, 1302). Selected bomb shows its recharge timer; counts show at the icon (yellow `5` observed when full; the cap was 5 for all four bombs).
 - Holding **Fire** fires rapidly; a tap fires one charge.
@@ -282,7 +305,7 @@ Pitfalls:
 - `SMART_CRAFT_YIELD` and the Freebies close template: verify after the next restart (`pausing for waiting workflow(s)`, `tap close-menu`).
 - Freebies via the Store (2026-11-27): needs a restart. Expect `tap Store`, `claimed 2 of 2 banked (confirmed)` and gems +5 per claim about every 15 min. Unverified: lit Claim colour, the banked count right after a claim, a possible reward popup (an unconfirmed claim dumps its frame to `temp/freebies_debug/`), and where the Store list opens when reached from the menu.
 - Whether drone upgrades survive prestige: compare before/after the next prestige.
-- Skill-Tree (unlocked at Obelisk 4): automation ideas from the wiki discussed, nothing built (user: explore as we go).
+- Skill Tree (2026-11-27): built, dry run on locally. After a restart expect `[ITEMS] combined 10 Skill Bits` once 10 are held and `[SKILL_TREE] page 1: owned@..., buyable@...` with `dry run: node ... is affordable`; frames in `temp/skill_tree_debug/`. To check before switching `ITEMS_SKILL_TREE_DRY_RUN` off: the lit cost button colour (threshold red > 115), whether buying shows a confirmation, how an owned node looks when selected, whether scrolling with drags in the left margin (x 20-120) moves the tree and stops at its ends, and whether a buyable node's ring stays above 65 when selected.
 - An Upgrades pin was added to the bottom bar by a stray tap (harmless; remove via Setup Pins).
 - Bomb rotation: one round every 30 s; Basic's and Infinity's "0" are checked (drain), other bombs still get one tap even when empty (no-op). Infinity Bomb added 2026-11-25 (slot 5, `infinity_bomb_tpl` 0.998 live); live 09:49 it fired 5 times from a full 5, and at 09:51 the slot read "0" so the drain steps skipped (shots 2.7 s apart all register). Whether the damage multiplier is visible anywhere, and whether it lasts until prestige, is unverified. Recharge upgrades change the ideal interval.
 - Bar types beyond World 1 floor 20 (VR-Demonite has an ore icon but no bar template yet) need templates as they unlock.

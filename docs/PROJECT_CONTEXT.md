@@ -486,7 +486,7 @@ rationale is not documented:
   button; open = open-button template AND the Use button, because the dimmed
   button behind a menu matches the open template), finds each item by its
   template (best template per 80 px slot, >= 0.9), reads its count (own digit
-  references `images/items/digits/`, no '9' yet: such counts read as unknown
+  references `images/items/digits/` with variants, no '9' yet: such counts read as unknown
   and the item is skipped) and whether its green buff timer runs. Items in
   `ITEMS_KEEP_RUNNING` are used when not running and held above
   `ITEMS_RESERVE`; Strawberries the same while the HUD is not Level Capped;
@@ -497,6 +497,25 @@ rationale is not documented:
   Reroll is never tapped) -> close the loot list, bag counts again; the
   difference is the chest yield. `item_record.json` (repo root, git-ignored)
   keeps bag snapshots, chest yields and use counts.
+- Skill Bits and Skill Tree (items worker, same lock): with
+  `ITEMS_COMBINE_SKILL_BITS` (default on) the bag pass uses Skill Bit (combine
+  10 into a Skill Point) while 10 or more are held, checked at most every
+  10 min. With `ITEMS_SKILL_TREE` (default off) `features/skill_tree.py`
+  visits the tree after a combine and every `ITEMS_SKILL_TREE_INTERVAL_S`
+  (1800 s): main menu -> Skill-Tree (`skill_tree/header.png`), Skill Points
+  read with Smart Craft's `read_text` (0 -> close), fast drags in the left
+  margin to the top, then page by page (600 px drags) down. Nodes are
+  components of non-background pixels (connecting lines removed by an
+  opening) classified by their frame ring: gold share >= 0.25 owned, stone
+  brightness >= 65 buyable; dark and locked nodes are ignored. Buyable nodes
+  in y 215-1200 are tapped top-down, left to right; a lit cost button (mean
+  red > 115) is pressed and the purchase counts only when the node turns gold
+  or the points drop, else the visit stops (frame in
+  `temp/skill_tree_debug/`). It stops at 0 points, at a page without owned or
+  buyable nodes, at the tree end (unchanged frame) or after 12 pages.
+  `ITEMS_SKILL_TREE_DRY_RUN` (default on) selects nodes and logs affordable
+  ones without pressing the cost button. Item count digits may have variants
+  (`images/items/digits/4_2.png` etc.).
 - Workflow steps `use_items` (`items` comma-separated, `reserve`,
   `cooldown_key`) and `item_cooldown` (`key`, `seconds`): use items inside a
   workflow (its lock); skipped while `ITEMS_ENABLED` is off or the key is

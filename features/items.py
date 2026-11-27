@@ -27,6 +27,11 @@ Policy (user, 2026-11-25), all switchable in the WebUI:
 - Every ITEMS_CHESTS_INTERVAL_S item chests and relic chests are opened. The
   bag is read before and after, and the difference is recorded as the chest
   yield in item_record.json (next to gem_statistics.json).
+- ITEMS_COMBINE_SKILL_BITS: Skill Bits are combined ("Combine 10 into a Skill
+  Point!", the normal Use button) while 10 or more are held.
+- ITEMS_SKILL_TREE: after a combine, and every ITEMS_SKILL_TREE_INTERVAL_S,
+  the Skill Tree is visited and Skill Points are spent (features/skill_tree.py;
+  ITEMS_SKILL_TREE_DRY_RUN only selects and logs nodes).
 
 Every action holds state.ingame_action_lock; new work waits while
 state.automation_paused is set. The workflow step runs inside the workflow's
@@ -106,12 +111,15 @@ _RECORD_FILE = Path(str(getattr(s, "BASE_DIR", "."))) / "item_record.json"
 _RECORD_KEEP = 1000
 
 _templates = {}        # key -> gray template
-_digits = {}           # "0".."9" -> gray reference cell (19 x 11)
+_digits = {}           # "0".."9" -> [gray reference cells (19 x 11)]; variants: digit_n.png
 _next_check = {}       # key -> earliest time worth opening the bag for it again
 _blocked_until = {}    # item_cooldown key -> time
 _key_used_ts = {}      # cooldown_key -> last time use_items used an item for it
 _BLOCK_WINDOW_S = 300.0  # item_cooldown only blocks after a real use this recently
 _last_chests_ts = 0.0
+_next_tree_ts = 0.0
+_SKILL_BITS_PER_POINT = 10
+_SKILL_BIT_RECHECK_S = 600.0
 _record_lock = threading.Lock()
 _thread = None
 _stop_evt = threading.Event()
@@ -134,10 +142,15 @@ def load_templates(img_dir=None) -> tuple:
         img = read_image(os.path.join(base, rel), cv2.IMREAD_GRAYSCALE)
         if img is not None:
             _templates[key] = img
-    for d in "0123456789":
-        img = read_image(os.path.join(base, "items", "digits", f"{d}.png"), cv2.IMREAD_GRAYSCALE)
-        if img is not None:
-            _digits[d] = img
+    # Counts render at sub-pixel offsets, so a digit can have variants
+    # ("4.png", "4_2.png", ...; 2026-11-27 bag: '4' scored 0.54-0.64 on the first).
+    folder = os.path.join(base, "items", "digits")
+    for name in sorted(os.listdir(folder)) if os.path.isdir(folder) else []:
+        d = name.split(".")[0].split("_")[0]
+        if len(d) == 1 and d.isdigit() and name.endswith(".png"):
+            img = read_image(os.path.join(folder, name), cv2.IMREAD_GRAYSCALE)
+            if img is not None:
+                _digits.setdefault(d, []).append(img)
     return len(_templates), len(_digits)
 
 
@@ -168,10 +181,11 @@ def read_count(gray, row, col):
         if cell.shape != (19, 11) or int((cell > 150).sum()) < 6:
             break
         best, score = None, -1.0
-        for d, ref in _digits.items():
-            sc = float(cv2.matchTemplate(cell, ref, cv2.TM_CCOEFF_NORMED)[0][0])
-            if sc > score:
-                best, score = d, sc
+        for d, refs in _digits.items():
+            for ref in refs:
+                sc = float(cv2.matchTemplate(cell, ref, cv2.TM_CCOEFF_NORMED)[0][0])
+                if sc > score:
+                    best, score = d, sc
         if score < _DIGIT_MIN_SCORE:
             return None if not text else int(text)  # an unknown glyph left of known digits
         text = best + text
@@ -543,20 +557,67 @@ def _periodic_keys() -> list:
     return keys
 
 
+def _combine_skill_bits(img, gray):
+    """Use Skill Bits ("Combine 10 into a Skill Point!") while 10 or more are
+    held. Returns (combined, bag)."""
+    combined = 0
+    bag = read_bag(img, gray)
+    for _ in range(50):
+        info = bag.get("skill_bit")
+        if info is None or info["count"] is None or info["count"] < _SKILL_BITS_PER_POINT:
+            break
+        if not _use_one("skill_bit", info, bag):
+            break
+        combined += 1
+        state.items_used = getattr(state, "items_used", 0) + 1
+        _log(f"[ITEMS] combined {_SKILL_BITS_PER_POINT} Skill Bits into a Skill Point (held {info['count']})", "FULL")
+        _record_use("skill_bit")
+        img, gray = _fresh()
+        bag = read_bag(img, gray)
+    _next_check["skill_bit"] = time.time() + _SKILL_BIT_RECHECK_S
+    return combined, bag
+
+
+def _visit_skill_tree() -> str:
+    """Spend Skill Points (caller holds the action lock). Returns a status note."""
+    from features import skill_tree
+    dry_run = bool(getattr(s, "ITEMS_SKILL_TREE_DRY_RUN", True))
+    try:
+        r = skill_tree.visit(_open_tile, dry_run=dry_run)
+    except (skill_tree.Abort, _Abort) as exc:
+        _log(f"[ITEMS] Skill Tree visit stopped: {exc}", "FULL")
+        return f"Skill Tree stopped: {exc}"
+    finally:
+        _close_menu()
+    note = (f"Skill Tree: {r['points']} point(s), bought {r['bought']}"
+            + (f", dry run: {r['would_buy']} affordable" if dry_run else "")
+            + (f", {r['unaffordable']} too expensive" if r["unaffordable"] else ""))
+    _log(f"[ITEMS] {note} ({r['pages']} page(s))", "FULL")
+    return note
+
+
 def run_cycle() -> str:
     """Caller holds the action lock. Returns ok | nothing | error."""
-    global _last_chests_ts
+    global _last_chests_ts, _next_tree_ts
     now = time.time()
     reserve = int(getattr(s, "ITEMS_RESERVE", 2))
     keys = _periodic_keys()
     cow = ["blue_cow"] if getattr(s, "ITEMS_USE_BLUE_COW", True) else []
     chests_due = (now - _last_chests_ts >= float(getattr(s, "ITEMS_CHESTS_INTERVAL_S", 1800.0))
                   and (getattr(s, "ITEMS_OPEN_CHESTS", True) or getattr(s, "ITEMS_OPEN_RELICS", True)))
-    if not chests_due and not _due(keys + cow, now):
+    combine_due = (getattr(s, "ITEMS_COMBINE_SKILL_BITS", True)
+                   and now >= _next_check.get("skill_bit", 0.0))
+    tree_on = getattr(s, "ITEMS_SKILL_TREE", False)
+    tree_due = tree_on and now >= _next_tree_ts
+    need_bag = chests_due or bool(_due(keys + cow, now)) or combine_due
+    if not need_bag and not tree_due:
         return "nothing"
     try:
         before = None
         opened = False
+        used = used_cow = []
+        combined = 0
+        tree_note = ""
         if chests_due:
             _last_chests_ts = now
             img, gray = _open_bag()
@@ -568,17 +629,26 @@ def run_cycle() -> str:
             if getattr(s, "ITEMS_OPEN_RELICS", True):
                 open_relics()
                 _close_menu()
-        img, gray = _open_bag()
-        if opened and before is not None:
-            gained = chest_yield(before, _counts(read_bag(img, gray)))   # before any use
-            _log("[ITEMS] chest yield: " + (", ".join(f"{ITEMS[k][1]} +{n}" for k, n in sorted(gained.items()))
-                                            or "nothing readable"), "FULL")
-            _update_record(lambda d: d["chest_batches"].append({"ts": round(time.time()), "gained": gained}))
-        used, bag = _run_uses(keys, reserve, "keep running", img, gray)
-        used_cow, bag = _run_uses(cow, 0, "Blue Cow", *_fresh()) if cow else ([], bag)
-        _record_snapshot(bag)
+        if need_bag:
+            img, gray = _open_bag()
+            if opened and before is not None:
+                gained = chest_yield(before, _counts(read_bag(img, gray)))   # before any use
+                _log("[ITEMS] chest yield: " + (", ".join(f"{ITEMS[k][1]} +{n}" for k, n in sorted(gained.items()))
+                                                or "nothing readable"), "FULL")
+                _update_record(lambda d: d["chest_batches"].append({"ts": round(time.time()), "gained": gained}))
+            used, bag = _run_uses(keys, reserve, "keep running", img, gray)
+            used_cow, bag = _run_uses(cow, 0, "Blue Cow", *_fresh()) if cow else ([], bag)
+            if combine_due:
+                combined, bag = _combine_skill_bits(*_fresh())
+            _record_snapshot(bag)
+        if tree_on and (tree_due or combined):
+            _next_tree_ts = now + float(getattr(s, "ITEMS_SKILL_TREE_INTERVAL_S", 1800.0))
+            _close_bag()
+            tree_note = _visit_skill_tree()
         state.items_last_status = (f"ok: used {', '.join(ITEMS[k][1] for k in used + used_cow) or 'nothing'}"
-                                   + ("; chests opened" if opened else ""))
+                                   + ("; chests opened" if opened else "")
+                                   + (f"; {combined} Skill Point(s) combined" if combined else "")
+                                   + (f"; {tree_note}" if tree_note else ""))
         return "ok"
     except _Abort as exc:
         state.items_last_status = f"stopped: {exc}"
@@ -593,7 +663,8 @@ def _close_menu_if_open():
     try:
         _img, gray = _fresh()
         if _find(gray, _MENU_READY_TPL, _MENU_ROI, 0.8)["found"] or _find(gray, _CHESTS_READY, None, 0.85)["found"] \
-                or _find(gray, _RELICS_READY, None, 0.85)["found"]:
+                or _find(gray, _RELICS_READY, None, 0.85)["found"] \
+                or _find(gray, "skill_tree/header.png", (150, 100, 750, 155), 0.85)["found"]:
             _close_menu()
     except _Abort:
         pass

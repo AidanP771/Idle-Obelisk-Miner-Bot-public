@@ -121,6 +121,10 @@ def settings_get():
                 "ITEMS_OPEN_CHESTS": s.ITEMS_OPEN_CHESTS,
                 "ITEMS_OPEN_RELICS": s.ITEMS_OPEN_RELICS,
                 "ITEMS_CHESTS_INTERVAL_S": s.ITEMS_CHESTS_INTERVAL_S,
+                "ITEMS_COMBINE_SKILL_BITS": s.ITEMS_COMBINE_SKILL_BITS,
+                "ITEMS_SKILL_TREE": s.ITEMS_SKILL_TREE,
+                "ITEMS_SKILL_TREE_INTERVAL_S": s.ITEMS_SKILL_TREE_INTERVAL_S,
+                "ITEMS_SKILL_TREE_DRY_RUN": s.ITEMS_SKILL_TREE_DRY_RUN,
             },
             "smart_craft": {
                 "SMART_CRAFT_INTERVAL_S": s.SMART_CRAFT_INTERVAL_S,
