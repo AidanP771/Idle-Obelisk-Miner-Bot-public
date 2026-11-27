@@ -768,8 +768,8 @@ def scan_upgrades(img, gray, generation):
             absolute = y + offset
             if not any(b == bar and abs(a - absolute) < 25 for b, _h, _n, a in found):
                 found.append((bar, have, need, absolute))
-        if not _button(gray, _tpl("buy.png"), _list_roi())["found"]:
-            break  # only locked ("Unlock At Level") rows from here on
+        # A page without a Buy button may hold only maxed rows; list_pages
+        # stops at the locked section ("Unlock At ...") or the list end.
     return found
 
 
@@ -781,8 +781,10 @@ def scan_upgrades(img, gray, generation):
 
 _WORKSHOP_HEADER_ROI = (100, 90, 850, 180)
 _WORKSHOP_ICON_X = (120, 700)
-_WORKSHOP_HAVE = (54, -6, 140, 24)    # relative to the cost icon's top-left
-_WORKSHOP_NEED = (54, 26, 140, 60)
+# x 49: an icon matched a few px right of its true position (topaz, 2026-11-27)
+# clipped the first digit at x 54; 47-51 read every saved Workshop frame.
+_WORKSHOP_HAVE = (49, -6, 140, 24)    # relative to the cost icon's top-left
+_WORKSHOP_NEED = (49, 26, 140, 60)
 _WORKSHOP_BUY = (640, -50, 880, 40)   # absolute x, y relative to the icons
 
 
@@ -849,8 +851,8 @@ def scan_workshop(img, gray, generation):
             for bar, have, need in row["costs"]:
                 if not any(b == bar and abs(a - absolute) < 25 for b, _h, _n, a in found):
                     found.append((bar, have, need, absolute))
-        if not _button(gray, _tpl("buy.png"), _list_roi())["found"]:
-            break  # only locked ("Unlock At Obelisk Level") rows from here on
+        # Maxed rows have no Buy button, so a page of them is scrolled past
+        # (new rows unlock below them); list_pages stops at the locked section.
     return found
 
 
@@ -883,7 +885,7 @@ def buy_workshop(generation):
             bought += 1
             state.smart_craft_upgrades_bought += 1
             _log(f"[SMART_CRAFT] bought Workshop upgrade ({summary}; {how})")
-        if bought >= limit or not _button(gray, _tpl("buy.png"), _list_roi())["found"]:
+        if bought >= limit:
             break
     return bought
 
@@ -1192,8 +1194,6 @@ def buy_upgrades(generation):
         if bought >= limit:
             _log(f"[SMART_CRAFT] purchase limit reached ({limit})")
             break
-        if not _button(gray, _tpl("buy.png"), _list_roi())["found"]:
-            break  # locked section
     return bought
 
 

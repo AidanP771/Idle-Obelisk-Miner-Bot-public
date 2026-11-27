@@ -10,6 +10,26 @@ the changes are in [DEVELOPMENT_NOTES.md](DEVELOPMENT_NOTES.md); behavior is in
 Local, unversioned changes (`config/user_workflows.json`,
 `config/user_settings.json`) are listed separately because git ignores them.
 
+## 2026-11-27
+
+### Smart Craft finds Workshop rows below maxed rows (`COMMIT_WS`)
+- User report: the first six Workshop upgrades are maxed and a new one
+  unlocked, but Smart Craft never looked at it ("Workshop: 0 buyable row(s)"
+  every cycle). Two causes, both seen on a live frame (2026-11-27 18:16):
+  - Scans and buying stopped on the first page without a Buy button. Maxed
+    rows have none, so the list was never scrolled to "Unlock Cherry Bomb".
+    The same stop was in the Upgrades scan and buying. Now only `list_pages`
+    ends a scan: at the locked section ("Unlock At ..." below every Buy),
+    at the list end, or at the page limit.
+  - The new row costs amethyst 4/600, topaz 0/500, obsidian 0/400. The topaz
+    icon matched 2 px to the right, the "have" text box (icon x + 54) cut
+    the "0", the cost read as "/" and the whole row was dropped as
+    unreadable. The text boxes start at x + 49 now (47-51 read every saved
+    Workshop frame).
+- Verified: 347 Python tests, including the live frame
+  (`tests/data/smart_craft/workshop_cherry.png`) and a scan whose first page
+  has no Buy button. Needs a restart; not yet seen live.
+
 ## 2026-11-25
 
 ### Smart Craft buys free upgrade rows (`a814e7d`)

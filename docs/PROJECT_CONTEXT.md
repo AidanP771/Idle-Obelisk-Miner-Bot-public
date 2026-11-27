@@ -259,6 +259,9 @@ lazy imports to avoid circular imports. Level detection writes
   the sum of both; in `next` mode the cheapest unmet one). Buying keeps the user-chosen priority: regular Upgrades first, then
   every Workshop row whose costs are all met and whose Buy button is bright,
   verified on a fresh frame. Workshop upgrades are permanent (survive prestige).
+  Maxed rows (green "Maxed", no Buy) are scrolled past: list scans end only at
+  the locked section, the list end or the page limit, never because one page
+  has no Buy button.
   Surplus ore (`SMART_CRAFT_SELL_SURPLUS_ORE`, default off): only when the
   last round bought nothing (so its upgrade scan is current), the Sell page is
   opened (`sell_all_label.png`). Rows are found by their red Sell button

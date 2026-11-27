@@ -557,9 +557,9 @@ class WorkshopTests(SmartCraftBase):
 
         def read_text(_g, roi):
             for (ix, iy), (have, need) in texts.items():
-                if roi[0] == ix + 54 and roi[1] == iy - 6:
+                if roi[0] == ix + 49 and roi[1] == iy - 6:
                     return have
-                if roi[0] == ix + 54 and roi[1] == iy + 26:
+                if roi[0] == ix + 49 and roi[1] == iy + 26:
                     return need
             return None
         f.read_text = read_text
@@ -598,6 +598,34 @@ class WorkshopTests(SmartCraftBase):
         self.assertEqual(f.tap.call_count, 1)
         self.assertEqual(self.state.smart_craft_upgrades_bought, 1)
 
+
+
+class WorkshopLiveFrameTests(SmartCraftBase):
+    """Live frame 2026-11-27: three maxed rows above "Unlock Cherry Bomb"."""
+    def test_three_cost_row_with_a_shifted_topaz_icon_is_read(self):
+        import cv2
+        img = cv2.imread(str(ROOT / "tests/data/smart_craft/workshop_cherry.png"))
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        f = self.feature
+        f.find_all = lambda g, tpl, roi, thr: []              # template search is stubbed in this base
+        f._button = Mock(return_value={"found": True, "x": 740, "y": 887, "w": 60, "h": 34,
+                                       "cx": 770, "cy": 904, "score": 0.84})
+        real_icons = f.find_bar_icons
+        self.assertEqual(sorted(b for b, *_ in real_icons(img, (120, 170, 700, 1395), 0.8)),
+                         ["amethyst", "obsidian", "topaz"])
+        rows = f.read_workshop_rows(img, gray)
+        self.assertEqual([(r["costs"], r["affordable"]) for r in rows],
+                         [([("amethyst", 4, 600), ("topaz", 0, 500), ("obsidian", 0, 400)], False)])
+
+    def test_a_page_of_maxed_rows_does_not_end_the_scan(self):
+        f = self.feature
+        row = {"costs": [("amethyst", 4, 600)], "y": 895, "buy": (770, 904), "affordable": False}
+        pages = [("maxed", None, 0), ("cherry", None, 400)]
+        f.list_pages = lambda img, gray, gen: iter(pages)
+        f.read_workshop_rows = lambda img, gray: [row] if img == "cherry" else []
+        f._fresh = Mock(side_effect=[("maxed", None), ("cherry", None)])
+        f._button = Mock(return_value={"found": False, "score": 0.0})   # no Buy on either page
+        self.assertEqual(f.scan_workshop("maxed", None, f._run_generation), [("amethyst", 4, 600, 1295)])
 
 class TwoCostTests(SmartCraftBase):
     def test_number_stops_at_the_next_cost_icon(self):

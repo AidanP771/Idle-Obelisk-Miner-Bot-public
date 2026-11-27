@@ -81,6 +81,13 @@ Measured at 900 x 1600, English UI. Coordinates are full-resolution pixels.
 - Upgrades are permanent. Priority chosen by the user: regular Upgrades first,
   Workshop with what is left.
 - Three glyph variants (`1_3`, `1_4`, `2_3`) were added from Workshop text.
+- 2026-11-27 (live frame `tests/data/smart_craft/workshop_cherry.png`):
+  Chain Bomb Amount 4/4, Infinity Bomb Unlocked 1/1 and Bomb Of Plenty Ore
+  Multi 3/3 show a green **Maxed** button instead of Buy; below them
+  "Unlock Cherry Bomb" 0/1 (amethyst 600, topaz 500, obsidian 400), then
+  "Unlock At Obelisk Level 6, 7, ...". Maxed rows have no Buy button, so a
+  page of them must not end a scan. Bar icons can match a few px off their
+  true position (topaz +2 px), so the cost text boxes start at icon x + 49.
 
 ### Lootbug popup
 - This setup shows two offers: a free one (green **Free** button, centre about
@@ -259,6 +266,7 @@ Pitfalls:
 - Surplus-ore selling: full sequence not yet run in game.
 - Gold upgrades (`SMART_CRAFT_BUY_GOLD_UPGRADES`, off by default, on locally): confirmed live 2026-11-25 03:04 (about 25 purchases, level 4 -> 9 etc.). They spend all gold (4 left afterwards), so drone points (about 302 gold each) wait; consider whether gold should be kept for drone points.
 - Pickaxe fix and fast scroll-to-top (2026-11-25): needs a restart. Watch for `copper` in `missing:`, a Craft of copper (copper ore comes from floors 1-4: a floor trip), `bought upgrade ... (copper ...)`, and fewer `[SCROLL] down` lines per page opening (2 instead of 3-5).
+- Workshop below maxed rows (2026-11-27): needs a restart. Expect "Workshop: 1 buyable row(s)" (Cherry Bomb) and amethyst/topaz/obsidian in the craft targets. Once Cherry Bomb is bought, the bomb rotation workflow needs a Cherry slot.
 - Workshop buying confirmed live 2026-11-25 (level 0 -> 1 at 03:42, 1 -> 2 at 04:09, confirmed by the level box).
 - `SMART_CRAFT_YIELD` and the Freebies close template: verify after the next restart (`pausing for waiting workflow(s)`, `tap close-menu`).
 - Whether drone upgrades survive prestige: compare before/after the next prestige.
