@@ -57,27 +57,28 @@ lazy imports to avoid circular imports. Level detection writes
   Last Screenshot, manual acknowledgement, animated deletion, preview and a
   cache-first detection test with fresh-capture fallback. Shared action lock, bounded chains and protection
   against blind repeated taps. No OCR. Details: [Notices](NOTICES.md).
-- **Freebies:** periodic detection using two icon templates, menu opening,
-  scrolling to find the claim button, claiming, counting and closing the menu.
-  The close button is matched with `FREEBIES_CLOSE_TEMPLATE` (default
-  `close_menu.png`) inside `FREEBIES_CLOSE_ROI`; layouts with a light-edged X
-  need `workflows/menu/close_menu_tpl.png`, otherwise the shop stays open.
-  Enabling wakes the worker for a prompt cycle.
-  Startup and each runtime activation use `FREEBIES_CHECK_INTERVAL_S_FIRST`
-  (default 300 seconds) until either available-icon template is detected.
-  The first detection immediately selects `FREEBIES_CHECK_INTERVAL_S_SLOW`
-  (default 2700 seconds / 45 minutes), even if the subsequent claim fails.
-  A scan without either available icon returns to FIRST (fast checks) until
-  the next detection selects SLOW again. Missing screenshots do not change
-  the phase; cancelled or older activation scans cannot reset it.
-  Restart or reactivation resets to FIRST. The countdown uses the chosen
-  delay; game-absent retries remain capped at 30 seconds. Freebies still waits
-  for the shared action lock. Logs show startup intervals, FIRST on activation,
-  transitions to FIRST after icon misses and to SLOW after detection,
-  action-lock waits and next-check delay,
-  mode and reason (`ok`, `no_game`), routed via `FREEBIES_LOG_LEVEL` (default
-  TXT, file only). Claim accounting and statistics activation are unchanged.
-  Both intervals are editable in the WebUI and require a process restart.
+- **Freebies:** each visit (under the shared action lock) opens the main
+  menu and the Store tile (`workflows/menu/permanent/store_tpl.png`; Store
+  ready = `freebie/store_loot_tables.png`), finds the Freebie Pack row by
+  `freebie/freebie_pack_label.png` (scrolling to the top and then slowly down
+  through `FREEBIES_CLAIM_ROI` if needed), reads "Banked N/2" with Smart
+  Craft's digit reader and taps Claim while a pack is banked and the button
+  is lit (at most two). A claim counts (state, statistics,
+  `FREEBIES_DIAMONDS_PER_CLAIM` gems, default 5) only when a fresh frame
+  shows a lower banked count or a dark Claim button; an unconfirmed claim is
+  logged and its frame saved to `temp/freebies_debug/`. The bottom-right
+  shop icon is not used (it can show a promotional sale), so
+  `FREEBIES_DETECT_ROI` and the icon templates are unused. The close button
+  is matched with `FREEBIES_CLOSE_TEMPLATE` inside `FREEBIES_CLOSE_ROI`.
+  Enabling wakes the worker for a prompt visit. After a completed visit the
+  next one is due in `FREEBIES_CHECK_INTERVAL_S_SLOW` (default 900 s; the
+  pack adds one claim per 10 min and banks two), after a failed visit (no
+  screenshot, menu, Store or row) in `FREEBIES_CHECK_INTERVAL_S_FIRST`
+  (default 300 s). Startup and reactivation start with FIRST; game-absent
+  retries remain capped at 30 seconds. Logs go through `FREEBIES_LOG_LEVEL`
+  (default TXT); the claim summary (`claimed N of M banked (confirmed)`)
+  through `FREEBIES_LOG_LEVEL_CLAIMED`. Both intervals are editable in the
+  WebUI and require a process restart.
   Legacy `FREEBIES_CHECK_INTERVAL_S` migrates to FIRST, explicit new values win,
   and SLOW uses its default when absent. Migration does not modify files until
   settings are saved.

@@ -12,6 +12,29 @@ Local, unversioned changes (`config/user_workflows.json`,
 
 ## 2026-11-27
 
+### Freebies claims the Freebie Pack through the Store (`COMMIT_FB`)
+- User report: the Freebie Pack was not being claimed. The pack adds one
+  claim every 10 min and banks two ("Banked: N/2"), but after a detection
+  the bot visited only every 45 min (`FREEBIES_CHECK_INTERVAL_S_SLOW` 2700)
+  and claimed one pack per visit, so most packs were lost (log 2026-11-27:
+  one claim every 45 min). It also started from the bottom-right shop icon,
+  which sometimes turns into a promotional sale shortcut, and never checked
+  the reward.
+- Now each visit opens the main menu and the Store tile, finds the
+  "Freebie Pack" row by its label (new templates
+  `freebie/freebie_pack_label.png`, `freebie/store_loot_tables.png`), reads
+  "Banked N/2" and taps Claim for every banked pack. A claim counts only when
+  a fresh frame shows a lower banked count (or the Claim button went dark);
+  unconfirmed claims are not counted and their frame goes to
+  `temp/freebies_debug/`. Next visit: `FREEBIES_CHECK_INTERVAL_S_SLOW`
+  (default now 900 s) after a completed visit, `..._FIRST` (300 s) after a
+  failed one. `FREEBIES_DETECT_ROI` is no longer used.
+  `FREEBIES_DIAMONDS_PER_CLAIM` default 5 (the pack shows 5 gems).
+- Verified: 348 Python and 27 JavaScript tests, including the live Store
+  frame (`tests/data/freebies/store_freebie_pack.png`: banked 0/2, dark
+  Claim). Not yet run live: a lit Claim button, the banked count after a
+  claim, and whether a reward popup appears. Needs a restart.
+
 ### Smart Craft finds Workshop rows below maxed rows (`dbc56b0`)
 - User report: the first six Workshop upgrades are maxed and a new one
   unlocked, but Smart Craft never looked at it ("Workshop: 0 buyable row(s)"
@@ -450,4 +473,5 @@ Backups of each step are kept in the session scratchpad, not in the repo.
 | 2026-11-24 | `user_settings.json` | `SMART_CRAFT_BUY_GOLD_UPGRADES` true (set by the user in the WebUI; gold rows are bought with the bar upgrades). |
 | 2026-11-25 | `user_workflows.json` | `bomb_rotation_early_game`: four `if template_not_visible(count_zero_tpl)` drain steps after Basic (wait 2.4 s + Fire); reloaded live 06:00. Backup before the edit in the session scratchpad. |
 | 2026-11-25 | `user_workflows.json` | `obelisk_fight`: `use_items` pickaxe items (cooldown key `obelisk`) before the fight; `obelisk_fight_attack` damage-warning branch: `item_cooldown obelisk 7200`; `bomb_rotation_early_game`: `use_items chaos_totem` (reserve 2). Inactive until `ITEMS_ENABLED`; needs the restart that brings the new step types. Backup in the session scratchpad. |
+| 2026-11-27 | `user_settings.json` | `FREEBIES_CHECK_INTERVAL_S_SLOW` 2700 -> 900 (Store visits every 15 min; the pack banks two 10-min claims). Backup in the session scratchpad. |
 | 2026-11-25 | `user_workflows.json` | `bomb_rotation_early_game`: Infinity Bomb (select + Fire) after Plenty, plus four drain steps on the slot-5 count (ROI [510,1245,550,1285]); reloaded live. Backup in the session scratchpad. |

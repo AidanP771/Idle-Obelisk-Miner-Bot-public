@@ -91,8 +91,8 @@ RUNNING_LOG_LEVEL = "TXT"
 
 # ========= Freebies feature =========
 FREEBIES_ENABLED_DEFAULT = False
-FREEBIES_CHECK_INTERVAL_S_FIRST = 300.0  # fast scans at startup/activation and after an icon miss
-FREEBIES_CHECK_INTERVAL_S_SLOW = 2700.0  # 45 min after detection until an icon miss
+FREEBIES_CHECK_INTERVAL_S_FIRST = 300.0  # next Store visit after a failed one (and at startup/activation)
+FREEBIES_CHECK_INTERVAL_S_SLOW = 900.0   # next Store visit after a completed one (pack: +1 per 10 min, banks 2)
 
 FREEBIES_FULL_TEMPLATE = "freebie/freebie_full.png"
 FREEBIES_FULL2_TEMPLATE = "freebie/freebie_full2.png"
@@ -100,17 +100,18 @@ FREEBIES_CLAIM_TEMPLATE = "freebie/freebie_claim.png"
 
 
 
-# Base-screen ROI where the freebie icon appears
+# Legacy (unused since 2026-11-27): the Store is opened through the main menu,
+# not the bottom-right shop icon, and the Freebie Pack row is found by its label.
 FREEBIES_DETECT_ROI = (713, 1470, 820, 1550)
-# Menu-screen ROI in which to search the claim button
+# Swipe area for scrolling the Store list
 FREEBIES_CLAIM_ROI = (645, 107, 835, 1472)
 
 FREEBIES_MATCH_THRESHOLD = 0.8
 FREEBIES_SCROLL_ATTEMPTS = 4        # slow-scroll tries after hard-scrolling up
 FREEBIES_SCROLL_TO_TOP_COUNT = 6    # fast scrolls used to reach the top
-FREEBIES_POST_OPEN_DELAY_S = 1.0    # wait after tapping the icon for the menu
+FREEBIES_POST_OPEN_DELAY_S = 1.0    # minimum wait for the Store page (polled, at least 3 s)
 FREEBIES_TAP_JITTER_PX = 4
-FREEBIES_DIAMONDS_PER_CLAIM = 28    
+FREEBIES_DIAMONDS_PER_CLAIM = 5     # gems per confirmed claim (Freebie Pack row shows 5, 2026-11-24)
 FREEBIES_LOG_LEVEL = "TXT"
 FREEBIES_LOG_LEVEL_CLAIMED = "FULL"  # log level for "Freebie Claimed +X Diamonds" line
 

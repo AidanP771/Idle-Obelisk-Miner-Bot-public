@@ -34,7 +34,7 @@ licence CC BY-NC-SA 4.0). Pages used so far:
 | [Bombs](https://shminer.miraheze.org/wiki/Bombs) (stub; re-read 2026-11-25, v2.2.52) | Bomb types and base recharge times (Basic 30 s, Chain 60 s, Plenty 110 s, Exp 120 s, Infinity 160 s); Fire / Fire Slow (1.25 s) / Fire All. Infinity Bomb (Workshop unlock): "Damage Multiplier per Infinity Bomb fired", all bomb multipliers capped at 99999x; charges, firing and ordering not stated. Bombs do no damage to the Obelisk. |
 | [Items](https://shminer.miraheze.org/wiki/Items) (read 2026-11-25; "75% up to date", v2.2.52, edited 2026-11-15) | Tier 1 items from Item Chests: effect, base duration, chest chance (Apple crit chance +10% 1:30 16%; Bread pickaxe radius 1.25x 1:30 16%; Drone Juice drone radius/speed +50% 1:30 16%; Banana Coffee mining speed 1.2x 2:00 10%; Pike crit damage +30% 2:00 10%; Eye of Newt triple rock +25% 2:00 10%; Rock Cake pickaxe damage +30% 2:30 5%; Juicy Plums crit chance/damage +25% 2:30 5%; Chaos Totem bomb damage 3x, recharge 2x 2:30 5%; Primal Meat pickaxe damage +100% 3:00 2.33%; Strawberries EXP 3x 3:00 2.33%; Charge Magnet refill up to 20 charges per bomb, instant, 2.33%; Blue Cow 2x game speed 10:00 0.2%; Skill Bit: 10 make a skill point). Durations are base values before Item Duration Multi. Stacking is not stated (measured, below). |
 | [Chests](https://shminer.miraheze.org/wiki/Chests) (= Relics redirect; read 2026-11-25, "up to date", v2.2.52, edited 2026-11-24) | Item and Relic Chests fill from rock damage meters (plus Freebies: 1 Item Chest, 10% Relic Chest; Lootbugs; offline 0.3/0.1 per h); no cost to open; relics are permanent perks with tier odds Common ~48%, Rare ~30%, Epic ~14%, Legendary ~7%, Mythic ~1%; **Reroll costs 200 gems and redistributes all relics** (never automate). |
-| [Store](https://shminer.miraheze.org/wiki/Store) (Gifts part, read 2026-11-25 via a summary, not verbatim) | Gifts unlock with the World 3 statue; Freebie pack every 10 min by default, bankable. |
+| [Store](https://shminer.miraheze.org/wiki/Store) (Gifts part, read 2026-11-25 via a summary, not verbatim) | Gifts unlock with the World 3 statue; Freebie pack every 10 min by default, bankable (confirmed in game 2026-11-27: banks 2). |
 | Obelisk (main page section) | 30 s fights, 20 min cooldown, armor is subtracted from damage, damage carries over |
 
 Wiki pages were last read 2026-11-23 (game v2.2.52 on the Prestige, Drones and
@@ -109,6 +109,17 @@ Timing (2026-11-24): a lootbug could stay on screen for minutes. Scans ran only 
 - The pack showed 5 gems (gems 372 -> 377), while `FREEBIES_DIAMONDS_PER_CLAIM`
   is 28, so gem statistics overstate. The pack banks up to 2 claims; the
   feature claims one per cycle.
+- 2026-11-27 (user and live frame `tests/data/freebies/store_freebie_pack.png`):
+  Main menu -> Store (Permanent row, tile at about (166,400)). The Store
+  opens with "2x ... Income" offers, then "Resource Packs": the
+  **Freebie Pack** row shows a refill timer ("3:27"), "Banked: 0/2", the
+  contents (5 gems, 1 item chest, 10% relic chest, 10% skill bit) and a
+  Claim button (dark when nothing is banked, mean red 74; lit buttons about
+  142). Below: "Full in: 13:27". One claim per 10 min, two banked at most.
+  The bottom-right shop icon sometimes shows a promotional sale instead of
+  the Store, so the feature goes through the menu. `read_text` reads the
+  banked "0/2"; the timers (hourglass, ':') do not read. The user claimed
+  one pack by hand: gems 1332 -> 1337.
 
 ### Sell page
 - A row's own **Sell** button sells **one** ore per tap.
@@ -269,6 +280,7 @@ Pitfalls:
 - Workshop below maxed rows (2026-11-27): needs a restart. Expect "Workshop: 1 buyable row(s)" (Cherry Bomb) and amethyst/topaz/obsidian in the craft targets. Once Cherry Bomb is bought, the bomb rotation workflow needs a Cherry slot.
 - Workshop buying confirmed live 2026-11-25 (level 0 -> 1 at 03:42, 1 -> 2 at 04:09, confirmed by the level box).
 - `SMART_CRAFT_YIELD` and the Freebies close template: verify after the next restart (`pausing for waiting workflow(s)`, `tap close-menu`).
+- Freebies via the Store (2026-11-27): needs a restart. Expect `tap Store`, `claimed 2 of 2 banked (confirmed)` and gems +5 per claim about every 15 min. Unverified: lit Claim colour, the banked count right after a claim, a possible reward popup (an unconfirmed claim dumps its frame to `temp/freebies_debug/`), and where the Store list opens when reached from the menu.
 - Whether drone upgrades survive prestige: compare before/after the next prestige.
 - Skill-Tree (unlocked at Obelisk 4): automation ideas from the wiki discussed, nothing built (user: explore as we go).
 - An Upgrades pin was added to the bottom bar by a stray tap (harmless; remove via Setup Pins).

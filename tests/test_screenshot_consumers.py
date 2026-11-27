@@ -155,7 +155,7 @@ class ConsumerSlotTests(unittest.TestCase):
     def setUp(self):
         self.settings = types.ModuleType("config.settings")
         self.settings.FREEBIES_CHECK_INTERVAL_S_FIRST = 300
-        self.settings.FREEBIES_CHECK_INTERVAL_S_SLOW = 2700
+        self.settings.FREEBIES_CHECK_INTERVAL_S_SLOW = 900
         state = types.ModuleType("config.app_state")
         self.cache = types.ModuleType("core.screen_cache")
         self.cache.get_screen = Mock(return_value=(None, 0, 0))
@@ -180,7 +180,7 @@ class ConsumerSlotTests(unittest.TestCase):
 
     def test_freebies_always_requests_fresh_own_full_screenshot(self):
         self.assertIsNone(self.freebies._fresh_screen())
-        self.cache.get_screen.assert_called_once_with("freebie_scr", max_age=0.0, force=True)
+        self.cache.get_screen.assert_called_once_with("freebie_scr", max_age=0.0, force=True, color=True)
         self.freebies.tap.assert_not_called()
 
     def test_level_uses_only_cache_before_capturing_own_slot(self):
