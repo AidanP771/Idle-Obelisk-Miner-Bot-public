@@ -12,7 +12,7 @@ Local, unversioned changes (`config/user_workflows.json`,
 
 ## 2026-11-27
 
-### Smart Craft finds Workshop rows below maxed rows (`COMMIT_WS`)
+### Smart Craft finds Workshop rows below maxed rows (`dbc56b0`)
 - User report: the first six Workshop upgrades are maxed and a new one
   unlocked, but Smart Craft never looked at it ("Workshop: 0 buyable row(s)"
   every cycle). Two causes, both seen on a live frame (2026-11-27 18:16):
