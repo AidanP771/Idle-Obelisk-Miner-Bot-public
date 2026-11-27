@@ -12,7 +12,7 @@ Local, unversioned changes (`config/user_workflows.json`,
 
 ## 2026-11-27
 
-### Freebies claims the Freebie Pack through the Store (`COMMIT_FB`)
+### Freebies claims the Freebie Pack through the Store (`d5d420f`)
 - User report: the Freebie Pack was not being claimed. The pack adds one
   claim every 10 min and banks two ("Banked: N/2"), but after a detection
   the bot visited only every 45 min (`FREEBIES_CHECK_INTERVAL_S_SLOW` 2700)
