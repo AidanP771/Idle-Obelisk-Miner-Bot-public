@@ -12,7 +12,7 @@ Local, unversioned changes (`config/user_workflows.json`,
 
 ## 2026-11-27
 
-### Freebie Pack: the lit Claim button is green (`COMMIT_FG`)
+### Freebie Pack: the lit Claim button is green (`73b2326`)
 - Problem: after the restart every Store visit (19:34-20:51, every 15 min)
   logged "2 banked but Claim is dark -> not claiming". The lit check used the
   mean red of the button, assumed from other red buttons; with packs banked
