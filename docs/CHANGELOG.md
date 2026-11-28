@@ -26,8 +26,8 @@ Local, unversioned changes (`config/user_workflows.json`,
 - Verified: 364 Python and 27 JavaScript tests, including the new live frame
   `tests/data/freebies/store_banked_lit.png` (banked 2, lit, Claim at
   (747,277)). Live log: the Skill Tree visit opened the tree, read 0 points
-  and closed (20:43). Not yet seen live: a claim and its confirmation (the
-  banked count dropping). Needs a restart.
+  and closed (20:43). Verified live after the restart (20:57): "claimed 2 of
+  2 banked (confirmed)", gems 1341 -> 1351 on screen (+5 per pack).
 
 ### Skill Bits are combined, the Skill Tree is visited (dry run first), item counts with '4' read again (`52c65e0`)
 - User request: combine Skill Bits once 10 are held and spend the Skill

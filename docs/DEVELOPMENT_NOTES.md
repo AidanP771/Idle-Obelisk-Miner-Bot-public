@@ -117,7 +117,8 @@ Timing (2026-11-24): a lootbug could stay on screen for minutes. Scans ran only 
   Claim button: dark red when nothing is banked, **green** when packs are
   banked (live frame `tests/data/freebies/store_banked_lit.png`, "Banked:
   2/2", "Full in: 0:00"; the red-channel check first assumed failed every
-  visit). Below: "Full in: 13:27". One claim per 10 min, two banked at most.
+  visit). A claim lowers "Banked" at once (2 -> 1 -> 0 within about a
+  second, no popup); two claims raised gems 1341 -> 1351 (2026-11-27 20:57). Below: "Full in: 13:27". One claim per 10 min, two banked at most.
   The bottom-right shop icon sometimes shows a promotional sale instead of
   the Store, so the feature goes through the menu. `read_text` reads the
   banked "0/2"; the timers (hourglass, ':') do not read. The user claimed
