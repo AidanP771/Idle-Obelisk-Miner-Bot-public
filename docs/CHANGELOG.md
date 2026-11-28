@@ -12,7 +12,7 @@ Local, unversioned changes (`config/user_workflows.json`,
 
 ## 2026-11-27
 
-### Smart Craft: fewer list walks, reliable list positions, timing experiment (`COMMIT_SP`)
+### Smart Craft: fewer list walks, reliable list positions, timing experiment (`9cc0781`)
 - User request: make the game interactions faster while keeping Smart
   Craft's accuracy, and test how short the gaps between actions can be.
 - Measured (log 20:17-21:04): a round took 60-80 s of Smart Craft's own time;
