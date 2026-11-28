@@ -12,6 +12,23 @@ Local, unversioned changes (`config/user_workflows.json`,
 
 ## 2026-11-27
 
+### Freebie Pack: the lit Claim button is green (`COMMIT_FG`)
+- Problem: after the restart every Store visit (19:34-20:51, every 15 min)
+  logged "2 banked but Claim is dark -> not claiming". The lit check used the
+  mean red of the button, assumed from other red buttons; with packs banked
+  the Claim button is green (frame kept by the worker's own slot,
+  `temp/freebie_scr.png`, 20:51).
+- Change: `read_pack` counts the button lit when at least 40% of its box is
+  green (live: 0.76 lit, 0.0 dark). The "Freebie Pack" label threshold drops
+  from 0.9 to 0.85 (the new frame matched at 0.92 at a sub-pixel scroll
+  offset; best other row 0.74). A visit that sees packs banked but no lit
+  Claim now saves the frame to `temp/freebies_debug/`.
+- Verified: 364 Python and 27 JavaScript tests, including the new live frame
+  `tests/data/freebies/store_banked_lit.png` (banked 2, lit, Claim at
+  (747,277)). Live log: the Skill Tree visit opened the tree, read 0 points
+  and closed (20:43). Not yet seen live: a claim and its confirmation (the
+  banked count dropping). Needs a restart.
+
 ### Skill Bits are combined, the Skill Tree is visited (dry run first), item counts with '4' read again (`52c65e0`)
 - User request: combine Skill Bits once 10 are held and spend the Skill
   Points in the Skill Tree, top-down. Only children of owned nodes can be

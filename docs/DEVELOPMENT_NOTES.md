@@ -114,8 +114,10 @@ Timing (2026-11-24): a lootbug could stay on screen for minutes. Scans ran only 
   opens with "2x ... Income" offers, then "Resource Packs": the
   **Freebie Pack** row shows a refill timer ("3:27"), "Banked: 0/2", the
   contents (5 gems, 1 item chest, 10% relic chest, 10% skill bit) and a
-  Claim button (dark when nothing is banked, mean red 74; lit buttons about
-  142). Below: "Full in: 13:27". One claim per 10 min, two banked at most.
+  Claim button: dark red when nothing is banked, **green** when packs are
+  banked (live frame `tests/data/freebies/store_banked_lit.png`, "Banked:
+  2/2", "Full in: 0:00"; the red-channel check first assumed failed every
+  visit). Below: "Full in: 13:27". One claim per 10 min, two banked at most.
   The bottom-right shop icon sometimes shows a promotional sale instead of
   the Store, so the feature goes through the menu. `read_text` reads the
   banked "0/2"; the timers (hourglass, ':') do not read. The user claimed

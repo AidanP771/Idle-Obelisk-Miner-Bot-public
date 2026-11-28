@@ -229,7 +229,12 @@ class FreebieStoreFrameTests(unittest.TestCase):
     def test_lit_claim_is_detected(self):
         img = self.img.copy()
         img[985:1055, 690:805] = (40, 40, 170)
-        self.assertTrue(self.read(img)["lit"])
+        self.assertFalse(self.read(img)["lit"])            # red is not the lit colour
+
+    def test_live_frame_with_two_banked_and_green_claim(self):
+        import cv2
+        img = cv2.imread(str(ROOT / "tests/data/freebies/store_banked_lit.png"))
+        self.assertEqual(self.read(img), {"banked": 2, "lit": True, "claim": (747, 277)})
 
     def test_row_cut_off_at_the_bottom_is_not_used(self):
         self.assertIsNotNone(self.read(self.img[:1100]))   # Claim box ends at y 1055

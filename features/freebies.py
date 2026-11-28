@@ -50,12 +50,13 @@ _TILES_ROI = (10, 100, 890, 1579)
 _STORE_READY_TPL = "freebie/store_loot_tables.png"   # "Loot Tables" button, Store only
 _STORE_READY_ROI = (600, 100, 900, 170)
 _LABEL_TPL = "freebie/freebie_pack_label.png"        # "Freebie Pack" (best other row 0.74)
+_LABEL_THRESHOLD = 0.85              # live matches 1.0 and 0.92 (sub-pixel scroll offset)
 _LIST_ROI = (0, 160, 900, 1470)
 # Relative to the label match's top-left (live frame 2026-11-27: label at (184, 930)).
 _BANKED_REL = (551, -2, 631, 30)     # "0/2" inside "Banked: 0/2"
 _CLAIM_REL = (506, 55, 621, 125)     # Claim button sample box
 _CLAIM_TAP_REL = (563, 90)
-_CLAIM_LIT_MIN_RED = 110             # mean red: dark (nothing banked) 74, lit button about 142
+_CLAIM_LIT_MIN_GREEN = 0.4          # green share of the box: lit (packs banked) 0.76, dark red 0.0
 _MAX_BANKED = 2
 _PAGE_WAIT_S = 3.0
 
@@ -157,7 +158,7 @@ def _read_banked(gray, roi):
 def read_pack(img):
     """Freebie Pack row on a Store frame: {banked, lit, claim: (x, y)} or None."""
     gray = _gray(img)
-    label = find_template(gray, _LABEL_TPL, roi=_LIST_ROI, threshold=0.9)
+    label = find_template(gray, _LABEL_TPL, roi=_LIST_ROI, threshold=_LABEL_THRESHOLD)
     if not label["found"]:
         return None
     lx, ly = label["x"], label["y"]
@@ -167,9 +168,12 @@ def read_pack(img):
     if ly + cy2 > h:
         return None      # row cut off at the bottom: scroll further
     patch = img[ly + cy1:ly + cy2, lx + cx1:lx + cx2]
-    red = float(patch[:, :, 2].mean()) if getattr(img, "ndim", 2) == 3 else 0.0
+    green = 0.0
+    if getattr(img, "ndim", 2) == 3 and patch.size:
+        b, g, r = (patch[:, :, i].astype(int) for i in range(3))
+        green = float(((g > 120) & (g > r + 50) & (g > b + 50)).mean())   # the lit Claim is green
     return {"banked": _read_banked(gray, (lx + bx1, ly + by1, lx + bx2, ly + by2)),
-            "lit": red > _CLAIM_LIT_MIN_RED,
+            "lit": green >= _CLAIM_LIT_MIN_GREEN,
             "claim": (lx + _CLAIM_TAP_REL[0], ly + _CLAIM_TAP_REL[1])}
 
 
@@ -311,6 +315,7 @@ def _run_claim_cycle() -> bool:
         if pack["banked"] == 0 or not pack["lit"]:
             if pack["banked"] and not pack["lit"]:
                 _log(f"[FREEBIES] {pack['banked']} banked but Claim is dark -> not claiming")
+                _dump(img, "banked_but_dark")
             break
         if not _cycle_active(generation):
             return False
