@@ -12,6 +12,39 @@ Local, unversioned changes (`config/user_workflows.json`,
 
 ## 2026-11-27
 
+### Smart Craft: fewer list walks, reliable list positions, timing experiment (`COMMIT_SP`)
+- User request: make the game interactions faster while keeping Smart
+  Craft's accuracy, and test how short the gaps between actions can be.
+- Measured (log 20:17-21:04): a round took 60-80 s of Smart Craft's own time;
+  each round walked each list twice (scan, then buy pass, for Upgrades and
+  Workshop), and a 400 px drag moves the list about 790 px. "List position
+  unknown" (3 times in 30 min) cut buy passes short: the one-row reference
+  band also matched a similar row (0.95 vs 0.93).
+- Changes (`features/smart_craft.py`):
+  - A buy pass runs only if the scan plus the bars just crafted shows a row
+    it could buy (`buy_candidates`; lit free and gold rows count too), and it
+    reads no page below the lowest such row. Otherwise the log says "buy pass
+    skipped (nothing affordable)".
+  - Rounds 2-3 reuse the Workshop scan (bar counts refreshed from the
+    Upgrades scan and the bars crafted) unless a Workshop row was bought.
+  - `list_shift` tries a two-row band (240 px) first: 18 of the 20 saved
+    "unknown" pairs now measure 782-807 px.
+  - After a drag the list is read once two frames in a row are equal
+    (`SMART_CRAFT_SCROLL_SETTLE_S` 0.2 first) instead of a fixed 0.8 s wait.
+  - The first page of each list is kept; a frame matching it counts as the
+    top without a confirming drag.
+  - Experiment settings (WebUI, `smart_craft`): `SMART_CRAFT_TIMING_LOG`
+    (per-action response times and a summary per cycle),
+    `SMART_CRAFT_TIMING_SCALE` (multiplies every fixed wait; each wait is
+    followed by a screen check), `SMART_CRAFT_CRAFT_TAP_GAP_S` (0.15).
+- Not changed: purchase confirmation, double reads, craft checks, yields,
+  pickaxe-first order. Larger page steps were dropped from the plan: a page
+  is already about two thirds of the list.
+- Verified: 372 Python and 27 JavaScript tests (new: live frame pair
+  `tests/data/smart_craft/list_shift_similar_rows_*.png`, candidate logic,
+  skipped passes, Workshop reuse and rescan, early stop, settle, saved top,
+  settings validation). Not yet run live; needs a restart.
+
 ### Freebie Pack: the lit Claim button is green (`73b2326`)
 - Problem: after the restart every Store visit (19:34-20:51, every 15 min)
   logged "2 banked but Claim is dark -> not claiming". The lit check used the
@@ -519,6 +552,7 @@ Backups of each step are kept in the session scratchpad, not in the repo.
 | 2026-11-24 | `user_settings.json` | `SMART_CRAFT_BUY_GOLD_UPGRADES` true (set by the user in the WebUI; gold rows are bought with the bar upgrades). |
 | 2026-11-25 | `user_workflows.json` | `bomb_rotation_early_game`: four `if template_not_visible(count_zero_tpl)` drain steps after Basic (wait 2.4 s + Fire); reloaded live 06:00. Backup before the edit in the session scratchpad. |
 | 2026-11-25 | `user_workflows.json` | `obelisk_fight`: `use_items` pickaxe items (cooldown key `obelisk`) before the fight; `obelisk_fight_attack` damage-warning branch: `item_cooldown obelisk 7200`; `bomb_rotation_early_game`: `use_items chaos_totem` (reserve 2). Inactive until `ITEMS_ENABLED`; needs the restart that brings the new step types. Backup in the session scratchpad. |
+| 2026-11-27 | `user_settings.json` | `SMART_CRAFT_TIMING_LOG` true (timing experiment, step 1; switch off afterwards). Backup in the session scratchpad. |
 | 2026-11-27 | `user_settings.json` | `ITEMS_COMBINE_SKILL_BITS` true, `ITEMS_SKILL_TREE` true, `ITEMS_SKILL_TREE_INTERVAL_S` 1800, `ITEMS_SKILL_TREE_DRY_RUN` true (no node is bought until dry run is switched off). Backup in the session scratchpad. |
 | 2026-11-27 | `user_settings.json` | `FREEBIES_CHECK_INTERVAL_S_SLOW` 2700 -> 900 (Store visits every 15 min; the pack banks two 10-min claims). Backup in the session scratchpad. |
 | 2026-11-25 | `user_workflows.json` | `bomb_rotation_early_game`: Infinity Bomb (select + Fire) after Plenty, plus four drain steps on the slot-5 count (ROI [510,1245,550,1285]); reloaded live. Backup in the session scratchpad. |

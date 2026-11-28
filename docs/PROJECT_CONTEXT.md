@@ -314,10 +314,21 @@ lazy imports to avoid circular imports. Level detection writes
   with an implausible change (> 50 bars per press) stops crafting; purchases
   count only if a fresh frame shows the row changed. The game keeps each
   list's scroll position, so reaching the top starts with one fast 1100 px
-  drag (momentum) and normal drags only confirm it (2026-11-25). The buy step
+  drag (momentum) and normal drags only confirm it (2026-11-25); the first
+  page of each list is kept per page tile, and a frame matching it at shift 0
+  counts as the top without a confirming drag (2026-11-27). After a drag the
+  list is read once two frames in a row show it standing still
+  (`SMART_CRAFT_SCROLL_SETTLE_S` first). Speed (2026-11-27): a buy pass runs
+  only if the scan (plus the bars just crafted) shows a row it could buy
+  (`buy_candidates`: every bar cost met, or a lit free/gold row) and reads no
+  page below the lowest such row; rounds 2-3 reuse the Workshop scan with
+  refreshed bar counts unless a Workshop row was bought. Waits can be scaled
+  for experiments (`SMART_CRAFT_TIMING_SCALE`, `SMART_CRAFT_CRAFT_TAP_GAP_S`)
+  and measured (`SMART_CRAFT_TIMING_LOG`: per-action times and a summary per
+  cycle). The buy step
   logs rows whose bar cost is met but whose Buy is dark. List scrolling measures
   the real content shift (drags overshoot by momentum) from a textured band
-  and treats repetitive matches as unknown, ending the scan with the rows read
+  (two rows, 240 px, then one row) and treats repetitive matches as unknown, ending the scan with the rows read
   so far. Verified on the emulator (2026-11-22, level 37-42, World 1 with
   seven bar types; 2026-11-23 offline on saved frames for Topaz, Obsidian,
   Demonite, VR-Tin and VR-Amethyst, e.g. the Demonite cost of Upgrade

@@ -53,6 +53,20 @@ Measured at 900 x 1600, English UI. Coordinates are full-resolution pixels.
 - Per-row **Buy** is bright red when affordable (mean R about 165), dark when not (about 80).
 - **Buy All** arms on the first tap (orange) and buys every affordable upgrade on the second. Smart Craft never taps it.
 - Craft page quantity buttons 1x and 5x (green = active); the game keeps the mode. In 5x the ratio column shows the cost of one press (5 bars).
+- Scrolling (2026-11-27, 20 dumped frame pairs): a slow 400 px / 1000 ms drag
+  moves the list 782-807 px (the game scrolls about twice the finger travel),
+  so a page step is already about two thirds of the 1225 px list and larger
+  drags would leave `list_shift`'s measurable range (about 975 px). The fast
+  1100 px / 300 ms drag before reaching the top moves the list less than one
+  slow drag (inferred from the number of confirming drags in the log). A
+  120 px reference band also matched a similar row one row pitch (about
+  345 px) away at 0.93 vs 0.95, which caused most "list position unknown"
+  stops; a 240 px band measures 18 of the 20 saved pairs.
+- Cycle timing (2026-11-27 20:17-21:04 log): a round took 60-80 s of Smart
+  Craft's own time: 4 list walks (scan and buy pass for Upgrades and
+  Workshop), each starting with 2-4 drags to the top, about 2.3 s per page
+  (1.0 s drag, 0.8 s wait, screenshots of about 0.22 s). Bomb yields add about
+  22 s every 45 s.
 - The Upgrades list ends in identical "Unlock At Level N" rows; scroll
   measurement treats them as ambiguous ("list position unknown"), which ends
   the scan correctly.
@@ -288,6 +302,21 @@ Pitfalls:
   the threshold) before using it.
 
 ## Open Items
+
+- Smart Craft speed (2026-11-27, needs a restart): check that "list position
+  unknown" is rare, "buy pass skipped (nothing affordable)" appears, rounds
+  are shorter (`round N` timestamps) and purchases are still confirmed.
+  Timing experiment (user request), one restart per step, logs only:
+  1. `SMART_CRAFT_TIMING_LOG` on (local, set), scale 1.0: baseline
+     `timing summary` lines;
+  2. `SMART_CRAFT_TIMING_SCALE` 0.5, then 0.3: compare "not confirmed", "not
+     stable across frames", "page did not open" and "no progress" counts;
+  3. `SMART_CRAFT_CRAFT_TAP_GAP_S` 0.08, then 0.04: watch for dropped presses
+     ("no progress ... retrying", fewer bars per press);
+  4. set the defaults from the measured maximum plus 0.1-0.2 s, record the
+     numbers here, switch the timing log off.
+  The `to-top fling/drag moved N px` lines show whether the fast drag is
+  worth its time.
 
 - Items feature (2026-11-25, `features/items.py`, off by default): built, not yet run live. User policy: pickaxe-related items (Primal Meat, Rock Cake, Juicy Plums, Apple, Pike) only for obelisk fights (via `use_items` in `obelisk_fight`; a damage warning blocks them for 2 h); Bread, Drone Juice, Banana Coffee, Eye of Newt kept running with reserve 2; Strawberries while not Level Capped; Chaos Totem with the bomb rotation (reserve 2); Blue Cow at once; Skill Bits and Charge Magnet manual; chests and relics every 30 min. To verify after switching `ITEMS_ENABLED` on and restarting: `[ITEMS] bag:` lines, `[ITEMS] used ...`, `[ITEMS] chest yield:`, relic opening without any tap left of x 560, `item_record.json`. Unverified: whether item buffs count for the obelisk armor check; Blue Cow template (none held; 0.929 on Drone Juice, resolved by best-template-per-slot); the digit '9'; the 'Tap anywhere' close tap at (450,1300).
 - Drone point check and floor Auto guard (2026-11-24): not yet observed live. Look for `[WF] read_number drone_points=` (two lines per prestige, the second increased) and `[FLOOR_AUTO]` lines.

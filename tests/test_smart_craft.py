@@ -250,6 +250,116 @@ class ListShiftTests(SmartCraftBase):
         self.assertIsNone(self.feature.list_shift(self.frame(0), self.frame(450)))
 
 
+class LiveListShiftTests(SmartCraftBase):
+    """Upgrades 2026-11-27 21:02: a 400 px drag moved the list 782 px, but the
+    one-row band also matched a similar row (0.95 vs 0.933) -> "position unknown"."""
+    def test_two_row_band_measures_the_shift(self):
+        import cv2
+        self.settings.SMART_CRAFT_LIST_ROI = (40, 170, 860, 1395)
+        before, after = (cv2.imread(str(ROOT / f"tests/data/smart_craft/list_shift_similar_rows_{n}.png"),
+                                    cv2.IMREAD_GRAYSCALE) for n in ("before", "after"))
+        self.assertIsNone(self.feature._band_shift(before, after, True, 120))   # the old behaviour
+        self.assertEqual(self.feature.list_shift(before, after, content_up=True), 782)
+
+
+class ScrollSettleTests(SmartCraftBase):
+    def setUp(self):
+        super().setUp()
+        self.settings.SMART_CRAFT_LIST_ROI = (0, 0, 10, 10)
+        self.moving = np.zeros((10, 10), np.uint8)
+        self.still = np.full((10, 10), 200, np.uint8)
+
+    def test_returns_after_two_still_frames(self):
+        f = self.feature
+        frames = iter([self.moving, self.still, self.still, self.still])
+        f._fresh = Mock(side_effect=lambda: (None, next(frames)))
+        _img, gray = f._scroll_list("up")
+        self.assertIs(gray, self.still)
+        self.assertEqual(f._fresh.call_count, 3)
+
+    def test_saved_top_frame_needs_no_scrolling(self):
+        f = self.feature
+        f._current_list = "upgrades_tpl"
+        f._top_frames = {"upgrades_tpl": "top"}
+        f.list_shift = Mock(return_value=0)
+        f.scroll.reset_mock()
+        self.assertEqual(f._scroll_to_top("img", "top", f._run_generation), ("img", "top"))
+        f.scroll.assert_not_called()
+        f._top_frames = {}
+
+
+class BuyCandidateTests(SmartCraftBase):
+    def test_rows_count_only_when_every_cost_is_met_after_crafting(self):
+        f = self.feature
+        rows = [("tin", 4, 6, 400), ("copper", 9, 2, 402),    # two-cost row: tin missing
+                ("copper", 9, 15, 800), ("adamant", 3, 3, 1200)]
+        self.assertEqual(f.buy_candidates(rows), [1200])
+        self.assertEqual(f.buy_candidates(rows, {"tin": 2}), [400, 1200])
+        self.assertEqual(f.buy_candidates(rows, {"copper": 6}, lit=[950]), [800, 950, 1200])
+        self.assertEqual(f.buy_candidates([]), [])
+
+    def test_buy_pass_stops_after_the_lowest_candidate_page(self):
+        f = self.feature
+        self.settings.SMART_CRAFT_LIST_ROI = (40, 170, 860, 1395)
+        f._open_page = Mock(return_value=(None, None))
+        read = []
+        def pages(img, gray, gen):
+            for offset in (0, 790, 1580):
+                read.append(offset)
+                yield img, gray, offset
+        f.list_pages = pages
+        f.read_upgrade_rows = Mock(return_value=[])
+        f.read_free_rows = Mock(return_value=[])
+        f.buy_upgrades(f._run_generation, stop_after=1400)      # below page 1 (to 1395), on page 2 (to 2185)
+        self.assertEqual(read, [0, 790])
+
+    def test_passes_without_candidates_are_skipped_and_workshop_scan_is_reused(self):
+        f = self.feature
+        self.settings.SMART_CRAFT_MAX_ROUNDS = 3
+        f._open_page = Mock(return_value=(None, None))
+        f._close_menu = Mock()
+        f._floor_step = Mock()
+        f.select_quantity_5x = Mock(return_value=True)
+        f.scan_upgrades = Mock(return_value=[("adamant", 0, 10, 400)])
+        f.scan_workshop = Mock(return_value=[("topaz", 0, 500, 900)])
+        f.craft_bar = Mock(side_effect=lambda bar, have, target, *a, **k: 10 if bar == "adamant" else 0)
+        f.buy_upgrades = Mock(side_effect=[1, 1, 0])
+        f.buy_workshop = Mock(return_value=0)
+        f.run_cycle()
+        self.assertEqual(f.scan_workshop.call_count, 1)        # rounds 2-3 reuse the first scan
+        f.buy_workshop.assert_not_called()                      # topaz 0/500 never affordable
+        self.assertEqual(f.buy_upgrades.call_args.kwargs["stop_after"], 400)
+        f.craft_bar = Mock(return_value=0)                      # nothing crafted: no buy pass at all
+        f.buy_upgrades.reset_mock()
+        f.run_cycle()
+        f.buy_upgrades.assert_not_called()
+
+    def test_a_workshop_purchase_forces_a_rescan(self):
+        f = self.feature
+        self.settings.SMART_CRAFT_MAX_ROUNDS = 2
+        f._open_page = Mock(return_value=(None, None))
+        f._close_menu = Mock()
+        f._floor_step = Mock()
+        f.select_quantity_5x = Mock(return_value=True)
+        f.scan_upgrades = Mock(return_value=[])
+        f.scan_workshop = Mock(return_value=[("citrine", 300, 300, 900)])
+        f.buy_upgrades = Mock(return_value=0)
+        f.buy_workshop = Mock(side_effect=[1, 0])
+        f.run_cycle()
+        self.assertEqual(f.scan_workshop.call_count, 2)
+
+
+class TimingSettingTests(unittest.TestCase):
+    def test_timing_settings_are_validated(self):
+        from config.validation import validate_settings
+        validate_settings({"smart_craft": {"SMART_CRAFT_SCROLL_SETTLE_S": 0.2, "SMART_CRAFT_CRAFT_TAP_GAP_S": 0.08,
+                                           "SMART_CRAFT_TIMING_SCALE": 0.5, "SMART_CRAFT_TIMING_LOG": True}})
+        for bad in ({"SMART_CRAFT_TIMING_SCALE": 0}, {"SMART_CRAFT_TIMING_LOG": "yes"},
+                    {"SMART_CRAFT_CRAFT_TAP_GAP_S": -1}):
+            with self.assertRaises(ValueError):
+                validate_settings({"smart_craft": bad})
+
+
 class CraftTests(SmartCraftBase):
     def run_craft(self, readings, have=0, target=10):
         rows = iter(readings)
@@ -474,7 +584,7 @@ class RoundTests(SmartCraftBase):
         f._open_page = Mock(return_value=(None, None))
         f._close_menu = Mock()
         f.select_quantity_5x = Mock(return_value=True)
-        f.craft_bar = Mock(return_value=5)
+        f.craft_bar = Mock(side_effect=lambda bar, have, target, *a, **k: target - have)   # reaches the target
         f.scan_workshop = Mock(return_value=[])
         f.buy_workshop = Mock(return_value=0)
 
@@ -485,8 +595,8 @@ class RoundTests(SmartCraftBase):
         f.scan_upgrades = Mock(return_value=[("runite", 10, 20, 400)])
         f.scan_workshop = Mock(return_value=[("runite", 10, 350, 600), ("citrine", 0, 300, 600)])
         order = []
-        f.buy_upgrades = Mock(side_effect=lambda g: order.append("upgrades") or 0)
-        f.buy_workshop = Mock(side_effect=lambda g: order.append("workshop") or 0)
+        f.buy_upgrades = Mock(side_effect=lambda g, **k: order.append("upgrades") or 0)
+        f.buy_workshop = Mock(side_effect=lambda g, **k: order.append("workshop") or 0)
         f.run_cycle()
         targets = {c.args[0]: c.args[2] for c in f.craft_bar.call_args_list}
         self.assertEqual(targets, {"runite": 370, "citrine": 300})
@@ -515,7 +625,7 @@ class RoundTests(SmartCraftBase):
         self.assertEqual(f.run_cycle(), "ok")
         self.assertEqual(f.buy_upgrades.call_count, 3)
         self.assertEqual(f.craft_bar.call_count, 3)
-        self.assertIn("crafted 15 bar(s), bought 2", self.state.smart_craft_last_status)
+        self.assertIn("crafted 30 bar(s), bought 2", self.state.smart_craft_last_status)
 
     def test_pickaxe_bar_is_crafted_first_and_drives_the_floor_trip(self):
         f = self.feature

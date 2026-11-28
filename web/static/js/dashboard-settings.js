@@ -124,6 +124,10 @@ const FIELD_HINTS={
   'SMART_CRAFT_SCROLL_PX':'drag distance per list scroll',
   'SMART_CRAFT_SCROLL_MS':'drag duration per list scroll; too short is ignored by the game',
   'SMART_CRAFT_UI_DELAY_S':'wait after navigation taps and craft batches',
+  'SMART_CRAFT_SCROLL_SETTLE_S':'wait after a list drag before checking (two equal frames) that the list stands still',
+  'SMART_CRAFT_CRAFT_TAP_GAP_S':'gap between Craft presses of one batch; too short shows as "no progress" retries in the log',
+  'SMART_CRAFT_TIMING_SCALE':'multiplies the fixed waits (1 = normal, 0.5 = half); each wait is followed by a screen check, so too short shows as retries or skips',
+  'SMART_CRAFT_TIMING_LOG':'log how long pages, scrolls and purchases take to show, with a summary per cycle',
   'SMART_CRAFT_LIST_ROI':'x1,y1,x2,y2 scrollable list area on Upgrades and Craft',
   'SMART_CRAFT_ICON_THRESHOLD':'0.0-1.0 match score for bar icons',
   'SMART_CRAFT_BUTTON_THRESHOLD':'0.0-1.0 match score for menu tiles and buttons',
@@ -196,7 +200,7 @@ const FIELD_UNITS={
   'LOOTBUG_SCREEN_REUSE_AGE_S':'s','LOOTBUG_POST_CLICK_DELAY_S':'s',
   'LOOTBUG_TAP_JITTER_PX':'px',
   /* smart craft */
-  'SMART_CRAFT_INTERVAL_S':'s','SMART_CRAFT_BUSY_RETRY_S':'s','SMART_CRAFT_UI_DELAY_S':'s',
+  'SMART_CRAFT_INTERVAL_S':'s','SMART_CRAFT_BUSY_RETRY_S':'s','SMART_CRAFT_UI_DELAY_S':'s','SMART_CRAFT_SCROLL_SETTLE_S':'s','SMART_CRAFT_CRAFT_TAP_GAP_S':'s',
   'SMART_CRAFT_SCROLL_PX':'px','SMART_CRAFT_SCROLL_MS':'ms','SMART_CRAFT_TAP_JITTER_PX':'px',
   /* workflows */
   'WF_INTERVAL_VARIANCE_PCT':'%',

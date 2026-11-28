@@ -294,22 +294,55 @@ def find_bar_icons(img_bgr, roi, threshold: float):
 #  Screen access and taps
 # ============================================================
 
+def _scale() -> float:
+    """SMART_CRAFT_TIMING_SCALE: multiplies the fixed waits (experiment knob).
+    Every wait is followed by a check of the screen, so a too-short wait shows
+    up as a retry or a skip, never as an unconfirmed purchase."""
+    return min(2.0, max(0.1, float(getattr(s, "SMART_CRAFT_TIMING_SCALE", 1.0))))
+
+
 def _delay():
-    time.sleep(float(getattr(s, "SMART_CRAFT_UI_DELAY_S", 0.8)))
+    time.sleep(float(getattr(s, "SMART_CRAFT_UI_DELAY_S", 0.8)) * _scale())
 
 
-def _wait_until(ready):
+# Measured response times per action kind (SMART_CRAFT_TIMING_LOG), summarised
+# and cleared at the end of each cycle.
+_timings = {}
+
+
+def _timing(kind, seconds, polls):
+    if not getattr(s, "SMART_CRAFT_TIMING_LOG", False):
+        return
+    _timings.setdefault(kind, []).append(seconds)
+    _log(f"[SMART_CRAFT] timing: {kind} after {seconds:.2f} s ({polls} poll(s))")
+
+
+def _timing_summary():
+    if not _timings:
+        return
+    parts = []
+    for kind, values in sorted(_timings.items()):
+        v = sorted(values)
+        parts.append(f"{kind} n={len(v)} min {v[0]:.2f} median {v[len(v) // 2]:.2f} max {v[-1]:.2f}")
+    _log("[SMART_CRAFT] timing summary: " + "; ".join(parts))
+    _timings.clear()
+
+
+def _wait_until(ready, kind="open"):
     """Poll fresh frames until ready(img, gray) after a navigation tap, instead
-    of one fixed SMART_CRAFT_UI_DELAY_S wait: checks every 0.25 s for up to
-    three times the delay. Returns (img, gray, ok); always checks once."""
+    of one fixed SMART_CRAFT_UI_DELAY_S wait: checks every 0.25 s (scaled by
+    SMART_CRAFT_TIMING_SCALE) for up to three times the delay. Returns
+    (img, gray, ok); always checks once."""
     delay = float(getattr(s, "SMART_CRAFT_UI_DELAY_S", 0.8))
-    step = min(0.25, delay)
+    step = min(0.25, delay) * _scale()
     checks = max(1, int(round(3 * delay / step))) if step > 0 else 1
-    for _ in range(checks):
+    started = time.time()
+    for poll in range(checks):
         if step > 0:
             time.sleep(step)
         img, gray = _fresh()
         if ready(img, gray):
+            _timing(kind, time.time() - started, poll + 1)
             return img, gray, True
     return img, gray, False
 
@@ -343,6 +376,7 @@ def _menu_open(gray):
 
 def _open_page(tile, ready, name, generation, section="this_prestige"):
     """Open the main menu if needed, tap a page tile, wait until ready(img, gray)."""
+    global _current_list
     _check_cancel(generation)
     img, gray = _fresh()
     if not _menu_open(gray):
@@ -350,14 +384,15 @@ def _open_page(tile, ready, name, generation, section="this_prestige"):
         if not button["found"]:
             raise _Abort(f"main menu button not found (score={button['score']:.3f})")
         _tap(button["cx"], button["cy"], "main menu")
-        img, gray, opened = _wait_until(lambda _img, g: _menu_open(g))
+        img, gray, opened = _wait_until(lambda _img, g: _menu_open(g), kind="menu")
         if not opened:
             raise _Abort("main menu did not open")
     match = _button(gray, f"workflows/menu/{section}/{tile}.png", (10, 100, 890, 1579))
     if not match["found"]:
         raise _Abort(f"{name} tile not found (score={match['score']:.3f})")
     _tap(match["cx"], match["cy"], name)
-    img, gray, opened = _wait_until(ready)
+    _current_list = tile                 # list_pages keeps one top-of-list frame per page
+    img, gray, opened = _wait_until(ready, kind="open")
     if not opened:
         raise _Abort(f"{name} page did not open")
     return img, gray
@@ -591,15 +626,20 @@ def _confirm_purchase(y, level_before, fallback_changed):
     Without a readable level (before or after) fallback_changed(img, gray)
     decides. Returns (confirmed, img, gray, how)."""
     img = gray = None
-    for _poll in range(_CONFIRM_POLLS):
-        time.sleep(_CONFIRM_STEP_S)
+    scale = _scale()
+    polls = _CONFIRM_POLLS if scale >= 1 else int(math.ceil(_CONFIRM_POLLS / scale))   # same total window
+    started = time.time()
+    for poll in range(polls):
+        time.sleep(_CONFIRM_STEP_S * scale)
         img, gray = _fresh()
         after = read_level(gray, y)
         if after is not None and (level_before is None or after > level_before):
+            _timing("buy", time.time() - started, poll + 1)
             return True, img, gray, f"level {level_before if level_before is not None else 0} -> {after}"
         if after is not None and level_before is not None:
             continue  # level readable but unchanged yet: the game may still update
         if fallback_changed(img, gray):
+            _timing("buy", time.time() - started, poll + 1)
             return True, img, gray, "row changed"
     return False, img, gray, "level unchanged" if level_before is not None else "no change seen"
 
@@ -657,12 +697,8 @@ def _list_roi():
     return tuple(getattr(s, "SMART_CRAFT_LIST_ROI", (40, 170, 860, 1395)))
 
 
-def list_shift(before, after, content_up=True):
-    """Pixels the list content moved up (negative: down) between two frames,
-    or None. The reference band is taken from the side the content moves
-    towards, so shifts of almost a full list height stay measurable."""
+def _band_shift(before, after, content_up, band_h):
     x1, y1, x2, y2 = _list_roi()
-    band_h = 120
     tops = range(y2 - band_h - 10, y1, -40) if content_up else range(y1 + 10, y2 - band_h, 40)
     top = next((t for t in tops if before[t:t + band_h, x1:x2].std() > 15), None)
     if top is None:
@@ -679,34 +715,101 @@ def list_shift(before, after, content_up=True):
     return top - (loc[1] + y1)
 
 
+# A 120 px band (one row) also matches a similar row one row pitch away
+# (Upgrades 2026-11-27: 0.95 vs 0.93 -> "position unknown" and a cut-short
+# pass); a 240 px band (two rows) separated every saved pair by >= 0.13.
+_SHIFT_BANDS = (240, 120)
+
+
+def list_shift(before, after, content_up=True):
+    """Pixels the list content moved up (negative: down) between two frames,
+    or None. The reference band is taken from the side the content moves
+    towards, so shifts of almost a full list height stay measurable. A two-row
+    band is tried first, a one-row band (the earlier behaviour) second."""
+    if before is None or after is None:
+        return None
+    for band_h in _SHIFT_BANDS:
+        shift = _band_shift(before, after, content_up, band_h)
+        if shift is not None:
+            return shift
+    return None
+
+
+_SETTLE_DIFF = 3.0      # mean abs gray difference of the list between two still frames
+_SETTLE_MAX_POLLS = 6
+
+
+def _list_still(a, b):
+    if a is None or b is None:
+        return True
+    x1, y1, x2, y2 = _list_roi()
+    return float(cv2.absdiff(a[y1:y2, x1:x2], b[y1:y2, x1:x2]).mean()) < _SETTLE_DIFF
+
+
+def _settled_frame():
+    """After a drag: frames until two in a row show the list standing still
+    (instead of one fixed SMART_CRAFT_UI_DELAY_S wait). Returns (img, gray);
+    the last frame if the list never settled (list_shift then decides)."""
+    started = time.time()
+    time.sleep(float(getattr(s, "SMART_CRAFT_SCROLL_SETTLE_S", 0.2)) * _scale())
+    img, gray = _fresh()
+    for poll in range(_SETTLE_MAX_POLLS):
+        new_img, new_gray = _fresh()
+        if _list_still(gray, new_gray):
+            _timing("scroll", time.time() - started, poll + 2)
+            return new_img, new_gray
+        img, gray = new_img, new_gray
+    return img, gray
+
+
 def _scroll_list(direction):
-    """direction: finger 'up' reveals rows below, 'down' rows above."""
+    """direction: finger 'up' reveals rows below, 'down' rows above. Returns
+    the settled frame (img, gray)."""
     if not scroll(direction, area=_list_roi(), distance=int(getattr(s, "SMART_CRAFT_SCROLL_PX", 400)),
                   duration_ms=int(getattr(s, "SMART_CRAFT_SCROLL_MS", 1000))):
         raise _Abort("scroll failed")
-    _delay()
+    return _settled_frame()
 
 
 # The game keeps each list's scroll position, so a page usually opens where the
-# last pass left it (2-3 pages down: 3-5 slow drags, about 2.5 s each). One long
-# fast drag (momentum) first; the normal drags then only confirm the top.
+# last pass left it. One fast drag first (it moves the list, but less than a
+# slow 400 px drag, which moves about 790 px: the game scrolls about twice the
+# finger travel); the normal drags then reach and confirm the top.
 _TOP_FLING_PX = 1100
 _TOP_FLING_MS = 300
 
+# The first page of each list (key: the page tile opened last), saved when a
+# pass reaches the top. A frame that matches it at shift 0 is the top, so no
+# confirming drag is needed (and none at all if the page opens at the top).
+_current_list = None
+_top_frames = {}
+
+
+def _at_saved_top(gray):
+    ref = _top_frames.get(_current_list)
+    if ref is None or gray is None:
+        return False
+    shift = list_shift(ref, gray, content_up=False)
+    return shift is not None and abs(shift) < 15
+
 
 def _scroll_to_top(img, gray, generation):
+    if _at_saved_top(gray):
+        return img, gray
     for attempt in range(int(getattr(s, "SMART_CRAFT_MAX_SCROLL_PAGES", 6)) + 2):
         _check_cancel(generation)
         if attempt == 0:
             if not scroll("down", area=_list_roi(), distance=_TOP_FLING_PX, duration_ms=_TOP_FLING_MS):
                 raise _Abort("scroll failed")
-            _delay()
+            new_img, new_gray = _settled_frame()
         else:
-            _scroll_list("down")
-        new_img, new_gray = _fresh()
+            new_img, new_gray = _scroll_list("down")
         shift = list_shift(gray, new_gray, content_up=False)
+        if getattr(s, "SMART_CRAFT_TIMING_LOG", False):
+            _log(f"[SMART_CRAFT] timing: to-top {'fling' if attempt == 0 else 'drag'} moved "
+                 f"{'?' if shift is None else -shift} px")
         img, gray = new_img, new_gray
-        if shift is not None and abs(shift) < 15:
+        if (shift is not None and abs(shift) < 15) or _at_saved_top(gray):
             return img, gray
     raise _Abort("list top not reached")
 
@@ -733,6 +836,8 @@ def list_pages(img, gray, generation):
     """Yield (img, gray, offset) from the top of the list to its end; offset is
     how far the content has moved up since the first page."""
     img, gray = _scroll_to_top(img, gray, generation)
+    if gray is not None and _current_list is not None:
+        _top_frames[_current_list] = gray
     pages, offset = int(getattr(s, "SMART_CRAFT_MAX_SCROLL_PAGES", 6)), 0
     for page in range(pages + 1):
         _check_cancel(generation)
@@ -742,8 +847,7 @@ def list_pages(img, gray, generation):
             return
         if locked_section_reached(gray):
             return  # only locked rows further down
-        _scroll_list("up")
-        new_img, new_gray = _fresh()
+        new_img, new_gray = _scroll_list("up")
         shift = list_shift(gray, new_gray, content_up=True)
         if shift is None:
             _log("[SMART_CRAFT] list position unknown after scrolling -> stopping here "
@@ -756,10 +860,17 @@ def list_pages(img, gray, generation):
         offset += shift
 
 
-def scan_upgrades(img, gray, generation):
-    """Read the Upgrades list down to the locked section; return deduplicated rows."""
+def scan_upgrades(img, gray, generation, lit=None):
+    """Read the Upgrades list down to the locked section; return deduplicated rows.
+    `lit` (a list) collects the absolute y of rows without a bar cost that can
+    be bought now: lit "Free!" rows, and lit gold rows with
+    SMART_CRAFT_BUY_GOLD_UPGRADES (they decide whether a buy pass is needed)."""
     found = []
     for img, gray, offset in list_pages(img, gray, generation):
+        if lit is not None:
+            lit.extend(y + offset for y, _bx, _by, on in read_free_rows(img, gray) if on)
+            if getattr(s, "SMART_CRAFT_BUY_GOLD_UPGRADES", False):
+                lit.extend(r[0] + offset for r in read_gold_rows(img, gray) if r[3])
         second = read_upgrade_rows(*_fresh())  # numbers may animate: require two equal reads
         for bar, have, need, y in read_upgrade_rows(img, gray):
             if not any(r[:3] == (bar, have, need) and abs(r[3] - y) < 5 for r in second):
@@ -856,13 +967,23 @@ def scan_workshop(img, gray, generation):
     return found
 
 
-def buy_workshop(generation):
+def _past(stop_after, offset):
+    """True when the row at absolute y `stop_after` (from the scan) was fully
+    on the page at `offset`, so later pages hold no candidate."""
+    return stop_after is not None and stop_after + _STOP_MARGIN_PX < offset + _list_roi()[3]
+
+
+_STOP_MARGIN_PX = 120   # a row's Buy button and level box lie within about 90 px of its cost icon
+
+
+def buy_workshop(generation, stop_after=None):
     """Tap Buy on Workshop rows whose every cost is met; a purchase counts only
-    when a fresh frame no longer shows the same affordable row."""
+    when a fresh frame no longer shows the same affordable row. With
+    stop_after (absolute y of the lowest candidate row) no page below it is read."""
     img, gray = _open_page("workshop_tpl", _workshop_ready, "Workshop", generation, section="permanent")
     limit = int(getattr(s, "SMART_CRAFT_MAX_BUYS", 20))
     bought = 0
-    for img, gray, _offset in list_pages(img, gray, generation):
+    for img, gray, offset in list_pages(img, gray, generation):
         skipped = []
         while bought < limit:
             _check_cancel(generation)
@@ -885,7 +1006,7 @@ def buy_workshop(generation):
             bought += 1
             state.smart_craft_upgrades_bought += 1
             _log(f"[SMART_CRAFT] bought Workshop upgrade ({summary}; {how})")
-        if bought >= limit:
+        if bought >= limit or _past(stop_after, offset):
             break
     return bought
 
@@ -976,7 +1097,7 @@ def _read_stable_row(bar):
     because mining changes it continuously."""
     for _attempt in range(3):
         first = read_craft_row(*_fresh(), bar)
-        time.sleep(0.4)
+        time.sleep(0.4 * _scale())
         second = read_craft_row(*_fresh(), bar)
         if first and second and all(first[k] == second[k] for k in ("bars", "ratio", "button")):
             return second
@@ -1104,9 +1225,10 @@ def craft_bar(bar, have, target, generation, quantity=None):
         batch = 1 if per_press is None else math.ceil(remaining / per_press)
         affordable = row["ore"] // row["ratio"]  # presses the remaining ore covers
         batch = max(1, min(batch, max_batch, max_presses - presses, affordable))
+        gap = float(getattr(s, "SMART_CRAFT_CRAFT_TAP_GAP_S", 0.15))
         for _ in range(batch):
             _tap(*row["button"], f"Craft {bar}")
-            time.sleep(0.15)
+            time.sleep(gap)
         presses += batch
         _delay()
         new = _read_stable_row(bar)
@@ -1142,15 +1264,16 @@ def craft_bar(bar, have, target, generation, quantity=None):
 #  Buy: purchase the bar-cost upgrades that are now affordable
 # ============================================================
 
-def buy_upgrades(generation):
+def buy_upgrades(generation, stop_after=None):
     """Tap Buy on affordable bar-cost upgrades; each purchase is counted only
     after a fresh frame shows the row changed. With SMART_CRAFT_BUY_GOLD_UPGRADES
     gold-cost rows are bought after the bar rows of each page; without it no
-    row with a gold cost is touched (filtered in read_upgrade_rows)."""
+    row with a gold cost is touched (filtered in read_upgrade_rows). With stop_after (absolute
+    y of the lowest candidate row from the scan) no page below it is read."""
     img, gray = _open_page("upgrades_tpl", _upgrades_ready, "Upgrades", generation)
     limit = int(getattr(s, "SMART_CRAFT_MAX_BUYS", 20))
     bought = 0
-    for img, gray, _offset in list_pages(img, gray, generation):
+    for img, gray, offset in list_pages(img, gray, generation):
         skipped = []
         first_read = True
         while bought < limit:
@@ -1193,6 +1316,8 @@ def buy_upgrades(generation):
             img, gray, bought, _stop = _buy_gold_rows(img, gray, generation, bought, limit)
         if bought >= limit:
             _log(f"[SMART_CRAFT] purchase limit reached ({limit})")
+            break
+        if _past(stop_after, offset):
             break
     return bought
 
@@ -1606,12 +1731,42 @@ def _unlock_rows(names, generation):
 #  Cycle
 # ============================================================
 
+def buy_candidates(rows, crafted=None, lit=()):
+    """Absolute y of the rows a buy pass could buy, sorted: rows whose every bar
+    cost is met with the bars crafted since the scan, plus `lit` rows (free or
+    gold, from scan_upgrades). rows: [(bar, have, need, y)] from a scan."""
+    crafted = crafted or {}
+    have = {}
+    for bar, h, _n, _y in rows:
+        have[bar] = max(have.get(bar, 0), h)
+    groups = []
+    for bar, _h, need, y in sorted(rows, key=lambda r: r[3]):
+        if groups and abs(groups[-1][0] - y) < 25:
+            groups[-1][1].append((bar, need))
+        else:
+            groups.append((y, [(bar, need)]))
+    met = [y for y, costs in groups if all(have[b] + crafted.get(b, 0) >= n for b, n in costs)]
+    return sorted(set(met) | set(lit))
+
+
+def _refresh_workshop(ws_rows, upgrade_rows, crafted):
+    """Workshop rows of an earlier round with current bar counts: from this
+    round's Upgrades scan where it shows the bar, else the old count plus the
+    bars crafted since. Costs change only when a Workshop row is bought."""
+    seen = {}
+    for bar, have, _n, _y in upgrade_rows:
+        seen[bar] = max(seen.get(bar, 0), have)
+    return [(bar, seen.get(bar, have + crafted.get(bar, 0)), need, y) for bar, have, need, y in ws_rows]
+
+
 def run_cycle(generation=None) -> str:
     """Caller owns the action lock. Returns ok | sold_only | nothing_needed | error | cancelled."""
     global _pickaxe_bar
     generation = _run_generation if generation is None else generation
     crafted = bought = 0
     first_summary = None
+    ws_cache = None          # Workshop rows of the last scan; rescanned after a Workshop purchase
+    crafted_by_bar = {}
     try:
         # Each round: read needs -> craft -> buy. Buying raises the next level's
         # cost, so further rounds continue while purchases still happen.
@@ -1619,15 +1774,24 @@ def run_cycle(generation=None) -> str:
         for round_no in range(1, int(getattr(s, "SMART_CRAFT_MAX_ROUNDS", 3)) + 1):
             _yield_point(generation)
             img, gray = _open_page("upgrades_tpl", _upgrades_ready, "Upgrades", generation)
-            rows = scan_upgrades(img, gray, generation)
+            lit = []
+            up_rows = scan_upgrades(img, gray, generation, lit=lit)
+            rows = up_rows
+            ws_rows = []
             pickaxe = pickaxe_row(rows)
             workshop = getattr(s, "SMART_CRAFT_WORKSHOP", True)
             if workshop:
-                _yield_point(generation)
-                img, gray = _open_page("workshop_tpl", _workshop_ready, "Workshop", generation,
-                                       section="permanent")
-                ws_rows = scan_workshop(img, gray, generation)
-                _log(f"[SMART_CRAFT] Workshop: {len({r[3] for r in ws_rows})} buyable row(s)")
+                if ws_cache is None:
+                    _yield_point(generation)
+                    img, gray = _open_page("workshop_tpl", _workshop_ready, "Workshop", generation,
+                                           section="permanent")
+                    ws_rows = scan_workshop(img, gray, generation)
+                    _log(f"[SMART_CRAFT] Workshop: {len({r[3] for r in ws_rows})} buyable row(s)")
+                else:
+                    ws_rows = _refresh_workshop(ws_cache, up_rows, crafted_by_bar)
+                    _log(f"[SMART_CRAFT] Workshop: {len({r[3] for r in ws_rows})} buyable row(s) "
+                         "(scan of the last round, nothing bought there since)")
+                ws_cache = ws_rows
                 rows = rows + ws_rows
             shortfalls = compute_shortfalls(rows, priority=pickaxe)
             _pickaxe_bar = pickaxe[0] if pickaxe and pickaxe[0] in shortfalls else None
@@ -1641,6 +1805,7 @@ def run_cycle(generation=None) -> str:
             first_summary = first_summary or summary
             _ore_missing.clear()
             _log(f"[SMART_CRAFT] round {round_no}: {len(rows)} bar-cost upgrade(s); missing: {summary}")
+            crafted_by_bar = {}
             if shortfalls:
                 quantity = None
                 for index, (bar, (have, target)) in enumerate(shortfalls.items()):
@@ -1649,14 +1814,29 @@ def run_cycle(generation=None) -> str:
                         quantity = None
                         if getattr(s, "SMART_CRAFT_USE_5X", True) and select_quantity_5x():
                             quantity = "5x"
-                    crafted += craft_bar(bar, have, target, generation, quantity)
+                    made = craft_bar(bar, have, target, generation, quantity)
+                    crafted += made
+                    crafted_by_bar[bar] = crafted_by_bar.get(bar, 0) + made
             bought_now = 0
             if getattr(s, "SMART_CRAFT_BUY_UPGRADES", True):
-                _yield_point(generation)
-                bought_now = buy_upgrades(generation)       # Upgrades first (user policy)
-                if workshop:
+                # A pass runs only if the scan (plus the bars just crafted) shows
+                # a row it could buy, and reads no page below the lowest one.
+                up_targets = buy_candidates(up_rows, crafted_by_bar, lit)
+                if up_targets:
                     _yield_point(generation)
-                    bought_now += buy_workshop(generation)
+                    bought_now = buy_upgrades(generation, stop_after=up_targets[-1])  # Upgrades first (user policy)
+                else:
+                    _log("[SMART_CRAFT] Upgrades: buy pass skipped (nothing affordable)")
+                if workshop:
+                    ws_targets = buy_candidates(ws_rows, crafted_by_bar)
+                    if ws_targets:
+                        _yield_point(generation)
+                        ws_bought = buy_workshop(generation, stop_after=ws_targets[-1])
+                        if ws_bought:
+                            ws_cache = None
+                        bought_now += ws_bought
+                    else:
+                        _log("[SMART_CRAFT] Workshop: buy pass skipped (nothing affordable)")
             bought += bought_now
             if not bought_now:
                 break
@@ -1689,6 +1869,7 @@ def run_cycle(generation=None) -> str:
     finally:
         if not _paused:  # never tap without the lock (cancelled during a pause)
             _close_menu()
+        _timing_summary()
 
 
 def _try_run_with_lock() -> str:
